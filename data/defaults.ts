@@ -2,15 +2,14 @@ import { TableConfig, TableType, CodeLibrary, CollarRow, SurveyRow, IntervalRow 
 
 export const defaultLibraries: CodeLibrary[] = [];
 
+// Only keep system-critical columns (Keys & Depths) needed for core logic to work.
+// Users will add their own value columns (e.g. Au, Lithology) via the UI or Import.
 export const defaultConfigs: TableConfig[] = [
   {
     tableType: TableType.COLLAR,
     columns: [
       { columnName: 'site_id', label: 'Site ID', isMandatory: true, type: 'string' },
       { columnName: 'total_depth', label: 'Total Depth', isMandatory: true, type: 'float' },
-      { columnName: 'x', label: 'Easting (X)', isMandatory: false, type: 'float' },
-      { columnName: 'y', label: 'Northing (Y)', isMandatory: false, type: 'float' },
-      { columnName: 'z', label: 'Elevation (Z)', isMandatory: false, type: 'float' },
     ],
   },
   {
@@ -28,7 +27,6 @@ export const defaultConfigs: TableConfig[] = [
       { columnName: 'site_id', label: 'Site ID', isMandatory: true, type: 'string' },
       { columnName: 'depth_from', label: 'Depth From', isMandatory: true, type: 'float' },
       { columnName: 'depth_to', label: 'Depth To', isMandatory: true, type: 'float' },
-      { columnName: 'lith_code', label: 'Lithology', isMandatory: true, type: 'string' },
     ],
   },
   {
@@ -37,7 +35,6 @@ export const defaultConfigs: TableConfig[] = [
       { columnName: 'site_id', label: 'Site ID', isMandatory: true, type: 'string' },
       { columnName: 'depth_from', label: 'Depth From', isMandatory: true, type: 'float' },
       { columnName: 'depth_to', label: 'Depth To', isMandatory: true, type: 'float' },
-      { columnName: 'sample_id', label: 'Sample ID', isMandatory: false, type: 'string' },
     ],
   },
   {
@@ -46,7 +43,6 @@ export const defaultConfigs: TableConfig[] = [
       { columnName: 'site_id', label: 'Site ID', isMandatory: true, type: 'string' },
       { columnName: 'depth_from', label: 'Depth From', isMandatory: true, type: 'float' },
       { columnName: 'depth_to', label: 'Depth To', isMandatory: true, type: 'float' },
-      { columnName: 'min_code', label: 'Mineral', isMandatory: true, type: 'string' },
     ],
   },
   {
@@ -55,7 +51,6 @@ export const defaultConfigs: TableConfig[] = [
       { columnName: 'site_id', label: 'Site ID', isMandatory: true, type: 'string' },
       { columnName: 'depth_from', label: 'Depth From', isMandatory: true, type: 'float' },
       { columnName: 'depth_to', label: 'Depth To', isMandatory: true, type: 'float' },
-      { columnName: 'ox_code', label: 'Oxidation Code', isMandatory: true, type: 'string' },
     ],
   },
   {

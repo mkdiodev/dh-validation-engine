@@ -1,4 +1,4 @@
-import React, { useState, useRef, useMemo } from 'react';
+import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { 
   TableType, 
   TableConfig, 
@@ -13,33 +13,38 @@ import {
 } from '../types';
 import { runValidation } from '../services/validationEngine';
 import { defaultConfigs, defaultLibraries, sampleAssay, sampleCollar, sampleLithology, sampleSurvey, sampleMineralization, sampleOxidation, sampleGeotech, sampleRQD, sampleVein } from '../data/defaults';
+// Import the User Config from TS file
+import { userConfig } from '../data/userConfig';
+
 import { 
   LucideLayoutDashboard, 
   LucideSettings, 
   LucideUpload, 
   LucidePlayCircle, 
-  LucideAlertTriangle,
-  LucideCheckCircle,
-  LucideFileText,
-  LucideFileSpreadsheet,
-  LucideDownload,
-  LucideTrash2,
-  LucideTable,
-  LucidePlus,
-  LucideX,
-  LucideSave,
-  LucideEdit3,
-  LucideBook,
-  LucideChevronDown,
-  LucideDatabase,
-  LucideChevronRight,
-  LucideLayers,
-  LucideActivity,
-  LucideMapPin,
-  LucideRotateCcw,
-  LucideInfo,
-  LucideBox,
-  LucideSearch
+  LucideAlertTriangle, 
+  LucideCheckCircle, 
+  LucideFileText, 
+  LucideFileSpreadsheet, 
+  LucideDownload, 
+  LucideTrash2, 
+  LucideTable, 
+  LucidePlus, 
+  LucideX, 
+  LucideSave, 
+  LucideEdit3, 
+  LucideBook, 
+  LucideChevronDown, 
+  LucideDatabase, 
+  LucideChevronRight, 
+  LucideLayers, 
+  LucideActivity, 
+  LucideMapPin, 
+  LucideRotateCcw, 
+  LucideInfo, 
+  LucideBox, 
+  LucideSearch,
+  LucideFileJson,
+  LucideRefreshCw
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
@@ -100,7 +105,8 @@ const LibraryManager = ({
   libraries: CodeLibrary[], 
   setLibraries: (libs: CodeLibrary[]) => void 
 }) => {
-  const [activeLibId, setActiveLibId] = useState<string>(libraries[0]?.id || '');
+  // Initialize activeLibId safely based on props
+  const [activeLibId, setActiveLibId] = useState<string>(() => libraries.length > 0 ? libraries[0].id : '');
   const [newLibName, setNewLibName] = useState('');
   
   // Code entry state
@@ -110,6 +116,19 @@ const LibraryManager = ({
   // File Import Refs
   const fileInputRef = useRef<HTMLInputElement>(null);
   const importNewLibRef = useRef<HTMLInputElement>(null);
+
+  // Critical: When the `libraries` prop changes completely (e.g. after Import), 
+  // we must ensure activeLibId points to something valid.
+  useEffect(() => {
+    if (libraries.length === 0) {
+      setActiveLibId('');
+    } else {
+      const exists = libraries.find(l => l.id === activeLibId);
+      if (!exists) {
+        setActiveLibId(libraries[0].id);
+      }
+    }
+  }, [libraries, activeLibId]);
 
   const activeLib = libraries.find(l => l.id === activeLibId);
 
@@ -162,7 +181,6 @@ const LibraryManager = ({
           const wsname = wb.SheetNames[0];
           const ws = wb.Sheets[wsname];
           
-          // Use header: 1 to get array of arrays [[A1, B1, C1], [A2, B2, C2], ...]
           const rows = XLSX.utils.sheet_to_json(ws, { header: 1 }) as any[][];
           
           if (rows.length === 0) {
@@ -174,25 +192,19 @@ const LibraryManager = ({
           let count = 0;
 
           rows.forEach((row, index) => {
-            // Heuristic: If it looks like a header row in row 0, skip it.
             if (index === 0) {
                const firstCell = String(row[0] || '').toLowerCase();
-               // If A1 contains "library" or "name", assume it's a header
                if (firstCell.includes('library') || firstCell.includes('name')) return;
             }
 
-            // Map Columns: A=Name, B=Code, C=Description
             const libName = row[0] ? String(row[0]).trim() : '';
             const code = row[1] ? String(row[1]).trim() : '';
             const desc = row[2] ? String(row[2]).trim() : '';
 
-            // Must have at least Lib Name and Code
             if (libName && code) {
                if (!libsToCreate[libName]) {
                  libsToCreate[libName] = [];
                }
-               
-               // Avoid duplicates within the file itself
                if (!libsToCreate[libName].some(i => i.code === code)) {
                  libsToCreate[libName].push({ code, description: desc });
                  count++;
@@ -205,19 +217,14 @@ const LibraryManager = ({
              return;
           }
 
-          // Merge Logic: Clone existing libraries to modify
           const newLibraries = [...libraries];
 
           Object.entries(libsToCreate).forEach(([name, items]) => {
-             // Check if library already exists (case insensitive)
              const existingLibIndex = newLibraries.findIndex(l => l.name.toLowerCase() === name.toLowerCase());
 
              if (existingLibIndex >= 0) {
-                // Merge into existing library
                 const existingLib = newLibraries[existingLibIndex];
                 const existingCodes = new Set(existingLib.items.map(i => i.code.toLowerCase()));
-                
-                // Only add new codes
                 const uniqueNewItems = items.filter(i => !existingCodes.has(i.code.toLowerCase()));
                 
                 if (uniqueNewItems.length > 0) {
@@ -227,7 +234,6 @@ const LibraryManager = ({
                    };
                 }
              } else {
-                // Create new library
                 const newId = name.toLowerCase().replace(/\s+/g, '_') + '_' + Math.random().toString(36).substr(2, 4);
                 newLibraries.push({
                    id: newId,
@@ -239,7 +245,6 @@ const LibraryManager = ({
              
           setLibraries(newLibraries);
           
-          // If we created/updated libraries, set the first one from the file as active
           const firstImportedName = Object.keys(libsToCreate)[0];
           const createdLib = newLibraries.find(l => l.name === firstImportedName);
           if (createdLib) setActiveLibId(createdLib.id);
@@ -279,10 +284,6 @@ const LibraryManager = ({
           
           jsonData.forEach((row: any) => {
             const keys = Object.keys(row);
-            // Smart column detection: 
-            // 1. Look for 'code' or 'id'
-            // 2. Look for 'description', 'desc', or 'name'
-            // 3. Fallback to 1st and 2nd column
             const codeKey = keys.find(k => ['code', 'id'].includes(k.toLowerCase())) || keys[0];
             const descKey = keys.find(k => ['description', 'desc', 'name', 'meaning'].includes(k.toLowerCase())) || keys[1];
 
@@ -294,7 +295,6 @@ const LibraryManager = ({
             }
           });
 
-          // Filter duplicates within the file and against existing
           const existingCodes = new Set(activeLib.items.map(i => i.code.toLowerCase()));
           const uniqueItems = newItems.filter(i => !existingCodes.has(i.code.toLowerCase()));
 
@@ -368,6 +368,9 @@ const LibraryManager = ({
           </div>
 
           <div className="flex-1 overflow-y-auto space-y-1">
+            {libraries.length === 0 && (
+                <div className="text-xs text-slate-400 text-center py-4 italic">No libraries found.</div>
+            )}
             {libraries.map(lib => (
               <div 
                 key={lib.id}
@@ -1010,7 +1013,10 @@ const Dashboard = () => {
   const [rqdData, setRqdData] = useState<any[]>(sampleRQD);
   const [veinData, setVeinData] = useState<any[]>(sampleVein);
 
-  // Config State with Persistence
+  // Config State with Persistence Logic:
+  // 1. Try LocalStorage (Recent Edits)
+  // 2. Try userConfig.ts (Project Baseline)
+  // 3. Fallback to defaultConfigs (Minimal/Empty)
   const [configs, setConfigs] = useState<TableConfig[]>(() => {
     if (typeof window !== 'undefined') {
         const saved = localStorage.getItem('drillcore_configs');
@@ -1022,7 +1028,8 @@ const Dashboard = () => {
             }
         }
     }
-    return defaultConfigs;
+    // Type casting because importing JSON can sometimes infer narrower types
+    return (userConfig.configs || defaultConfigs) as TableConfig[];
   });
 
   const [libraries, setLibraries] = useState<CodeLibrary[]>(() => {
@@ -1036,39 +1043,114 @@ const Dashboard = () => {
             }
         }
     }
-    return defaultLibraries;
+    return (userConfig.libraries || defaultLibraries) as CodeLibrary[];
   });
 
-  const [isSaving, setIsSaving] = useState(false);
+  // UI Version State: Used to force remount of configuration components upon import/reset
+  // This solves the issue where internal state (tabs, inputs) doesn't reset when parent props change.
+  const [configUiVersion, setConfigUiVersion] = useState(0);
+  const importConfigRef = useRef<HTMLInputElement>(null);
 
   // UI State
   const [activeSection, setActiveSection] = useState<'import' | 'config' | 'validate'>('import');
   const [activeImportType, setActiveImportType] = useState<TableType>(TableType.COLLAR);
   const [validationResult, setValidationResult] = useState<ValidationSummary | null>(null);
 
-  const handleSaveConfig = () => {
-    setIsSaving(true);
+  // --- Auto-Save Effect ---
+  // Automatically saves to localStorage whenever configs or libraries change.
+  useEffect(() => {
     try {
       localStorage.setItem('drillcore_configs', JSON.stringify(configs));
       localStorage.setItem('drillcore_libraries', JSON.stringify(libraries));
-      
-      // Simulate network/disk delay for better UX
-      setTimeout(() => {
-        setIsSaving(false);
-      }, 1000);
     } catch (e) {
-      console.error("Failed to save config", e);
-      setIsSaving(false);
-      alert("Failed to save configuration. Storage might be full.");
+      console.error("Auto-save failed:", e);
     }
+  }, [configs, libraries]);
+
+  const handleExportConfig = () => {
+    const payload = {
+      timestamp: new Date().toISOString(),
+      version: "1.0",
+      libraries,
+      configs
+    };
+    
+    // Export specifically as JSON so users can overwrite the project file
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(payload, null, 2));
+    const downloadAnchorNode = document.createElement('a');
+    downloadAnchorNode.setAttribute("href", dataStr);
+    downloadAnchorNode.setAttribute("download", `userConfig.json`); // Naming it exactly like the system file to hint at replacement
+    document.body.appendChild(downloadAnchorNode); 
+    downloadAnchorNode.click();
+    downloadAnchorNode.remove();
+  };
+
+  const handleImportConfig = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      try {
+        const str = evt.target?.result as string;
+        const payload = JSON.parse(str);
+        
+        // Robust check for payload structure
+        if (payload.configs && Array.isArray(payload.configs)) {
+           const libraryCount = payload.libraries ? payload.libraries.length : 0;
+           const configCount = payload.configs.length;
+           const dateStr = payload.timestamp ? new Date(payload.timestamp).toLocaleString() : 'unknown date';
+
+           if(confirm(`Import configuration?\n\nDate: ${dateStr}\nRules: ${configCount} tables\nLibraries: ${libraryCount}\n\nThis will overwrite your current settings.`)) {
+             // 1. Immediately Overwrite LocalStorage (Persistence)
+             // This ensures that even if the page crashes or is reloaded manually, the new config is the source of truth.
+             localStorage.setItem('drillcore_configs', JSON.stringify(payload.configs));
+             localStorage.setItem('drillcore_libraries', JSON.stringify(payload.libraries || []));
+
+             // 2. Update React State
+             setConfigs(payload.configs);
+             setLibraries(payload.libraries || []); 
+             
+             // 3. Force UI Refresh
+             setConfigUiVersion(prev => prev + 1);
+
+             alert("Configuration imported successfully! Click 'Reload System' if you encounter any UI sync issues.");
+           }
+        } else {
+           alert("Error: Invalid configuration file. The JSON must contain a 'configs' array.");
+        }
+      } catch (err) {
+        console.error(err);
+        alert("Failed to parse the configuration file. Please ensure it is a valid JSON file exported from this application.");
+      } finally {
+        // Always reset input so the same file can be selected again if needed
+        if (importConfigRef.current) importConfigRef.current.value = '';
+      }
+    };
+    reader.readAsText(file);
   };
 
   const handleResetConfig = () => {
-    if (confirm("Are you sure you want to reset all rules and libraries to default? This action cannot be undone.")) {
-      setConfigs(defaultConfigs);
-      setLibraries(defaultLibraries);
+    if (confirm("Reset configuration?\n\nThis will clear your local changes and revert to the 'userConfig' file stored in the project source.")) {
+      // 1. Reset to User Config File (or defaults if missing)
+      const resetConfigs = JSON.parse(JSON.stringify(userConfig.configs || defaultConfigs));
+      const resetLibs = JSON.parse(JSON.stringify(userConfig.libraries || defaultLibraries));
+
+      setConfigs(resetConfigs);
+      setLibraries(resetLibs);
+      
+      // 2. Clear LocalStorage so the JSON file remains the source of truth
       localStorage.removeItem('drillcore_configs');
       localStorage.removeItem('drillcore_libraries');
+
+      // 3. Force UI Refresh
+      setConfigUiVersion(prev => prev + 1);
+    }
+  };
+
+  const handleReloadApp = () => {
+    if(confirm("Reload the application?\n\nThis will refresh the page and load the latest configuration from storage.")) {
+      window.location.reload();
     }
   };
 
@@ -1190,38 +1272,73 @@ const Dashboard = () => {
            <div className="flex justify-between items-end bg-white p-6 rounded-lg border border-slate-200 shadow-sm flex-shrink-0">
              <div>
                <h3 className="text-lg font-bold text-slate-800">System Configuration</h3>
-               <p className="text-sm text-slate-500 mt-1">
-                 Define validation rules and manage reference codes. 
-                 <br/>These settings are persisted locally in your browser.
+               <p className="text-sm text-slate-500 mt-1 flex items-center gap-2">
+                 <LucideCheckCircle className="w-3 h-3 text-emerald-500" />
+                 All changes are auto-saved to your browser.
                </p>
              </div>
              <div className="flex gap-3">
+                <input 
+                  type="file" 
+                  ref={importConfigRef} 
+                  onChange={handleImportConfig} 
+                  className="hidden" 
+                  accept=".json"
+                />
+                
+                <button 
+                   onClick={handleReloadApp}
+                   className="flex items-center gap-2 px-3 py-2 bg-amber-50 border border-amber-200 text-amber-700 hover:bg-amber-100 rounded-md text-sm font-medium transition-all shadow-sm"
+                   title="Reload Application to apply changes strictly"
+                 >
+                   <LucideRefreshCw className="w-4 h-4" />
+                   Reload System
+                 </button>
+
+                 <div className="w-px h-8 bg-slate-200 mx-1"></div>
+
+                <button 
+                   onClick={() => importConfigRef.current?.click()}
+                   className="flex items-center gap-2 px-3 py-2 bg-white border border-slate-300 text-slate-600 hover:bg-slate-50 rounded-md text-sm font-medium transition-all shadow-sm"
+                   title="Import Configuration from JSON"
+                 >
+                   <LucideUpload className="w-4 h-4" />
+                   Import
+                 </button>
+                <div className="w-px h-8 bg-slate-200 mx-1"></div>
                 <button 
                    onClick={handleResetConfig}
-                   className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-300 text-slate-600 hover:bg-slate-50 rounded-md text-sm font-medium transition-all shadow-sm"
+                   className="flex items-center gap-2 px-3 py-2 bg-white border border-slate-300 text-slate-600 hover:bg-slate-50 rounded-md text-sm font-medium transition-all shadow-sm"
                  >
                    <LucideRotateCcw className="w-4 h-4" />
-                   Reset Defaults
+                   Reset to Defaults
                  </button>
                 <button 
-                   onClick={handleSaveConfig}
-                   className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all shadow-sm ${isSaving ? 'bg-emerald-600 text-white' : 'bg-indigo-600 hover:bg-indigo-700 text-white'}`}
+                   onClick={handleExportConfig}
+                   className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-md text-sm font-medium transition-all shadow-sm"
+                   title="Download config to update the codebase"
                  >
-                   {isSaving ? <LucideCheckCircle className="w-4 h-4" /> : <LucideSave className="w-4 h-4" />}
-                   {isSaving ? 'Saved!' : 'Save Configuration'}
+                   <LucideFileJson className="w-4 h-4" />
+                   Download Master Config
                  </button>
              </div>
            </div>
 
            <div className="flex flex-col gap-6">
+             {/* Key Prop ensures component fully remounts on Import/Reset */}
              <ConfigPanel 
+               key={`config-panel-${configUiVersion}`}
                configs={configs} 
                libraries={libraries} 
                setConfigs={setConfigs}
                availableColumnsMap={availableColumnsMap}
                hasDataMap={hasDataMap}
              />
-             <LibraryManager libraries={libraries} setLibraries={setLibraries} />
+             <LibraryManager 
+               key={`lib-manager-${configUiVersion}`}
+               libraries={libraries} 
+               setLibraries={setLibraries} 
+             />
            </div>
         </div>
       );
