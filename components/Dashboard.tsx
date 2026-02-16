@@ -153,12 +153,6 @@ const LibraryManager = ({
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Use filename as library name (remove extension)
-    const fileName = file.name;
-    const nameWithoutExt = fileName.substring(0, fileName.lastIndexOf('.')) || fileName;
-    // Clean up underscores/dashes for better readability
-    const cleanName = nameWithoutExt.replace(/[_-]/g, ' ');
-
     const reader = new FileReader();
     reader.onload = (evt) => {
       const bstr = evt.target?.result;
@@ -167,49 +161,90 @@ const LibraryManager = ({
           const wb = XLSX.read(bstr, { type: 'binary' });
           const wsname = wb.SheetNames[0];
           const ws = wb.Sheets[wsname];
-          const jsonData = XLSX.utils.sheet_to_json(ws);
           
-          if (jsonData.length === 0) {
+          // Use header: 1 to get array of arrays [[A1, B1, C1], [A2, B2, C2], ...]
+          const rows = XLSX.utils.sheet_to_json(ws, { header: 1 }) as any[][];
+          
+          if (rows.length === 0) {
              alert("File is empty");
              return;
           }
 
-          const newItems: LibraryItem[] = [];
-          
-          jsonData.forEach((row: any) => {
-            const keys = Object.keys(row);
-            const codeKey = keys.find(k => ['code', 'id', 'key'].includes(k.toLowerCase())) || keys[0];
-            const descKey = keys.find(k => ['description', 'desc', 'name', 'meaning', 'value'].includes(k.toLowerCase())) || keys[1];
+          const libsToCreate: Record<string, LibraryItem[]> = {};
+          let count = 0;
 
-            const code = row[codeKey] ? String(row[codeKey]).trim() : '';
-            const description = (descKey && row[descKey]) ? String(row[descKey]).trim() : '';
+          rows.forEach((row, index) => {
+            // Heuristic: If it looks like a header row in row 0, skip it.
+            if (index === 0) {
+               const firstCell = String(row[0] || '').toLowerCase();
+               // If A1 contains "library" or "name", assume it's a header
+               if (firstCell.includes('library') || firstCell.includes('name')) return;
+            }
 
-            if (code) {
-               newItems.push({ code, description });
+            // Map Columns: A=Name, B=Code, C=Description
+            const libName = row[0] ? String(row[0]).trim() : '';
+            const code = row[1] ? String(row[1]).trim() : '';
+            const desc = row[2] ? String(row[2]).trim() : '';
+
+            // Must have at least Lib Name and Code
+            if (libName && code) {
+               if (!libsToCreate[libName]) {
+                 libsToCreate[libName] = [];
+               }
+               
+               // Avoid duplicates within the file itself
+               if (!libsToCreate[libName].some(i => i.code === code)) {
+                 libsToCreate[libName].push({ code, description: desc });
+                 count++;
+               }
             }
           });
 
-          // Filter duplicates within the file
-          const uniqueItems = newItems.filter((item, index, self) =>
-            index === self.findIndex((t) => (
-              t.code === item.code
-            ))
-          );
-
-          if (uniqueItems.length > 0) {
-             const newId = cleanName.toLowerCase().replace(/\s+/g, '_') + '_' + Math.random().toString(36).substr(2, 4);
-             const newLib: CodeLibrary = {
-                id: newId,
-                name: cleanName,
-                items: uniqueItems
-             };
-             
-             setLibraries([...libraries, newLib]);
-             setActiveLibId(newId);
-             alert(`Successfully imported new library "${cleanName}" with ${uniqueItems.length} codes.`);
-          } else {
-             alert("No valid codes found in file.");
+          if (count === 0) {
+             alert("No valid data found. Ensure Column A=Library Name, B=Code, C=Description.");
+             return;
           }
+
+          // Merge Logic: Clone existing libraries to modify
+          const newLibraries = [...libraries];
+
+          Object.entries(libsToCreate).forEach(([name, items]) => {
+             // Check if library already exists (case insensitive)
+             const existingLibIndex = newLibraries.findIndex(l => l.name.toLowerCase() === name.toLowerCase());
+
+             if (existingLibIndex >= 0) {
+                // Merge into existing library
+                const existingLib = newLibraries[existingLibIndex];
+                const existingCodes = new Set(existingLib.items.map(i => i.code.toLowerCase()));
+                
+                // Only add new codes
+                const uniqueNewItems = items.filter(i => !existingCodes.has(i.code.toLowerCase()));
+                
+                if (uniqueNewItems.length > 0) {
+                   newLibraries[existingLibIndex] = {
+                      ...existingLib,
+                      items: [...existingLib.items, ...uniqueNewItems]
+                   };
+                }
+             } else {
+                // Create new library
+                const newId = name.toLowerCase().replace(/\s+/g, '_') + '_' + Math.random().toString(36).substr(2, 4);
+                newLibraries.push({
+                   id: newId,
+                   name: name,
+                   items: items
+                });
+             }
+          });
+             
+          setLibraries(newLibraries);
+          
+          // If we created/updated libraries, set the first one from the file as active
+          const firstImportedName = Object.keys(libsToCreate)[0];
+          const createdLib = newLibraries.find(l => l.name === firstImportedName);
+          if (createdLib) setActiveLibId(createdLib.id);
+
+          alert(`Successfully processed file. Found ${Object.keys(libsToCreate).length} libraries with ${count} total codes.`);
 
         } catch (error) {
           console.error(error);
@@ -326,9 +361,9 @@ const LibraryManager = ({
               className="hidden" 
               accept=".csv, .xlsx, .xls"
             />
-            <p className="text-[10px] text-slate-400 mt-2 text-center flex items-center justify-center gap-1">
-              <LucideInfo className="w-3 h-3" />
-              Tip: Filename becomes Library Name
+            <p className="text-[10px] text-slate-400 mt-2 text-center flex flex-col items-center justify-center gap-1">
+              <span className="flex items-center gap-1 font-bold"><LucideInfo className="w-3 h-3" /> Format Required:</span>
+              <span>Col A: Library Name | Col B: Code | Col C: Desc</span>
             </p>
           </div>
 
