@@ -1,0 +1,5 @@
+{
+  "name": "DrillCore Validator",
+  "description": "A professional core drilling data validation suite. Features separate validation logic and configuration modules, supporting sequential checks, interval integrity, and library-based lookup validation.",
+  "requestFramePermissions": []
+}
