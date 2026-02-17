@@ -469,13 +469,12 @@ const ConfigPanel = ({
   libraries, 
   setConfigs,
   availableColumnsMap,
-  hasDataMap
 }: { 
   configs: TableConfig[], 
   libraries: CodeLibrary[], 
   setConfigs: (c: TableConfig[]) => void,
   availableColumnsMap: Record<string, string[]>,
-  hasDataMap: Record<string, boolean>
+  
 }) => {
   const [activeTab, setActiveTab] = useState<TableType>(TableType.LITHOLOGY);
   const [newColName, setNewColName] = useState('');
@@ -1307,7 +1306,6 @@ const Dashboard = () => {
                libraries={libraries} 
                setConfigs={setConfigs}
                availableColumnsMap={availableColumnsMap}
-               hasDataMap={hasDataMap}
              />
              <LibraryManager 
                libraries={libraries} 
