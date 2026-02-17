@@ -15,6 +15,8 @@ import { runValidation } from '../services/validationEngine';
 import { defaultConfigs, defaultLibraries, sampleAssay, sampleCollar, sampleLithology, sampleSurvey, sampleMineralization, sampleOxidation, sampleGeotech, sampleRQD, sampleVein } from '../data/defaults';
 // Import the User Config from TS file
 import { userConfig } from '../data/userConfig';
+// Import Supabase functions for config persistence
+import { saveConfigToSupabase, loadConfigFromSupabase, isSupabaseConfigured } from '../services/supabaseClient';
 
 import { 
   LucideSettings, 
@@ -361,15 +363,15 @@ const LibraryManager = ({
             {libraries.map(lib => (
               <div 
                 key={lib.id}
-                onClick={() => setActiveLibId(lib.id)}
-                className={`flex items-center justify-between px-3 py-2 rounded-md cursor-pointer text-sm font-medium transition-colors ${activeLibId === lib.id ? 'bg-indigo-50 text-indigo-700 border border-indigo-200' : 'text-slate-600 hover:bg-slate-50'}`}
+                className={`group flex items-center justify-between px-3 py-2 rounded-md cursor-pointer text-sm font-medium transition-colors ${activeLibId === lib.id ? 'bg-indigo-50 text-indigo-700 border border-indigo-200' : 'text-slate-600 hover:bg-slate-50'}`}
               >
-                <span>{lib.name}</span>
+                <span onClick={() => setActiveLibId(lib.id)} className="flex-1">{lib.name}</span>
                 <button 
                   onClick={(e) => { e.stopPropagation(); handleDeleteLibrary(lib.id); }}
-                  className="text-slate-400 hover:text-red-500 opacity-0 group-hover:opacity-100"
+                  className="p-1 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                  title="Delete this library"
                 >
-                  <LucideTrash2 className="w-3 h-3" />
+                  <LucideTrash2 className="w-4 h-4" />
                 </button>
               </div>
             ))}
@@ -1039,23 +1041,76 @@ const Dashboard = () => {
 
   // UI Version State: Used to force remount of configuration components upon import/reset
   // This solves the issue where internal state (tabs, inputs) doesn't reset when parent props change.
-  const [configUiVersion, setConfigUiVersion] = useState(0);
+  // const [configUiVersion, setConfigUiVersion] = useState(0);
+
+  // Sync State: Track Supabase sync status
+  const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'synced' | 'error'>('idle');
+  const [isLoadingSupabase, setIsLoadingSupabase] = useState(true);
 
   // UI State
   const [activeSection, setActiveSection] = useState<'import' | 'config' | 'validate'>('import');
   const [activeImportType, setActiveImportType] = useState<TableType>(TableType.COLLAR);
   const [validationResult, setValidationResult] = useState<ValidationSummary | null>(null);
 
-  // --- Auto-Save Effect ---
-  // Automatically saves to localStorage whenever configs or libraries change.
+  // --- Load Config from Supabase on Mount ---
+  // Try to fetch the shared config from Supabase on first load
   useEffect(() => {
-    try {
-      localStorage.setItem('drillcore_configs', JSON.stringify(configs));
-      localStorage.setItem('drillcore_libraries', JSON.stringify(libraries));
-    } catch (e) {
-      console.error("Auto-save failed:", e);
-    }
-  }, [configs, libraries]);
+    const loadSupabaseConfig = async () => {
+      if (!isSupabaseConfigured()) {
+        setIsLoadingSupabase(false);
+        return; // Supabase not configured, use defaults
+      }
+
+      try {
+        const supabaseConfig = await loadConfigFromSupabase();
+        if (supabaseConfig?.configs && supabaseConfig?.libraries) {
+          setConfigs(supabaseConfig.configs as TableConfig[]);
+          setLibraries(supabaseConfig.libraries as CodeLibrary[]);
+          setSyncStatus('synced');
+          console.log('Config loaded from Supabase');
+        }
+      } catch (error) {
+        console.error('Failed to load config from Supabase:', error);
+        setSyncStatus('error');
+      } finally {
+        setIsLoadingSupabase(false);
+      }
+    };
+
+    loadSupabaseConfig();
+  }, []); // Run once on mount
+
+  // --- Auto-Save Effect ---
+  // Automatically saves to localStorage and Supabase whenever configs or libraries change.
+  useEffect(() => {
+    if (isLoadingSupabase) return; // Skip during initial load
+
+    const autoSave = async () => {
+      // Always save to localStorage
+      try {
+        localStorage.setItem('drillcore_configs', JSON.stringify(configs));
+        localStorage.setItem('drillcore_libraries', JSON.stringify(libraries));
+      } catch (e) {
+        console.error("localStorage auto-save failed:", e);
+      }
+
+      // Save to Supabase if configured
+      if (isSupabaseConfigured()) {
+        setSyncStatus('syncing');
+        try {
+          await saveConfigToSupabase(configs, libraries);
+          setSyncStatus('synced');
+        } catch (error) {
+          console.error("Supabase auto-save failed:", error);
+          setSyncStatus('error');
+        }
+      }
+    };
+
+    // Debounce to avoid too many requests
+    const debounceTimer = setTimeout(autoSave, 500);
+    return () => clearTimeout(debounceTimer);
+  }, [configs, libraries, isLoadingSupabase]);
 
   const handleExportConfig = () => {
     const payload = {
@@ -1193,10 +1248,45 @@ const Dashboard = () => {
            <div className="flex justify-between items-end bg-white p-6 rounded-lg border border-slate-200 shadow-sm flex-shrink-0">
              <div>
                <h3 className="text-lg font-bold text-slate-800">System Configuration</h3>
-               <p className="text-sm text-slate-500 mt-1 flex items-center gap-2">
-                 <LucideCheckCircle className="w-3 h-3 text-emerald-500" />
-                 All changes are auto-saved to your browser.
-               </p>
+               <div className="flex gap-6 mt-2 items-start">
+                 <p className="text-sm text-slate-500 flex items-center gap-2">
+                   <LucideCheckCircle className="w-3 h-3 text-emerald-500" />
+                   Auto-saved to your browser
+                 </p>
+                 {/* Supabase Sync Status */}
+                 {isSupabaseConfigured() && (
+                   <p className={`text-sm flex items-center gap-2 ${
+                     syncStatus === 'synced' ? 'text-emerald-600' :
+                     syncStatus === 'syncing' ? 'text-blue-600' :
+                     syncStatus === 'error' ? 'text-red-600' : 'text-slate-500'
+                   }`}>
+                     {syncStatus === 'synced' && (
+                       <>
+                         <LucideCheckCircle className="w-3 h-3" />
+                         Synced to Supabase
+                       </>
+                     )}
+                     {syncStatus === 'syncing' && (
+                       <>
+                         <LucideActivity className="w-3 h-3 animate-pulse" />
+                         Syncing to Supabase...
+                       </>
+                     )}
+                     {syncStatus === 'error' && (
+                       <>
+                         <LucideAlertTriangle className="w-3 h-3" />
+                         Sync failed (using local)
+                       </>
+                     )}
+                     {syncStatus === 'idle' && (
+                       <>
+                         <LucideCheckCircle className="w-3 h-3 opacity-50" />
+                         Ready to sync
+                       </>
+                     )}
+                   </p>
+                 )}
+               </div>
              </div>
              <div className="flex gap-3">
                 <button 
@@ -1211,9 +1301,8 @@ const Dashboard = () => {
            </div>
 
            <div className="flex flex-col gap-6">
-             {/* Key Prop ensures component fully remounts on Import/Reset */}
+             {/* ConfigPanel and LibraryManager components */}
              <ConfigPanel 
-               key={`config-panel-${configUiVersion}`}
                configs={configs} 
                libraries={libraries} 
                setConfigs={setConfigs}
@@ -1221,7 +1310,6 @@ const Dashboard = () => {
                hasDataMap={hasDataMap}
              />
              <LibraryManager 
-               key={`lib-manager-${configUiVersion}`}
                libraries={libraries} 
                setLibraries={setLibraries} 
              />
