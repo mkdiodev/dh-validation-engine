@@ -20,11 +20,44 @@ const safeFloat = (val: any): number => {
 
 /**
  * Helper: Safe Site ID extraction
- * Ensures we always get a string for reporting, even if 'site_id' key is missing or named differently in raw data.
+ * Ensures we always get a string for reporting, using UPPERCASE keys
  */
 const safeSiteId = (row: any): string => {
-  // Try common keys if normalized site_id is empty/undefined
-  return row.site_id || row.hole_id || row['Site ID'] || row['Hole ID'] || row['HOLEID'] || row.id || 'Unknown';
+  return row.SITE_ID || row.HOLE_ID || row.HOLEID || row.id || 'Unknown';
+};
+
+/**
+ * 0. Structure Validation
+ * Check if the uploaded data contains all columns marked as isSchemaRequired
+ */
+const validateStructure = (
+  rows: any[],
+  config: TableConfig
+): ValidationError[] => {
+  const errors: ValidationError[] = [];
+  
+  if (!rows || rows.length === 0) return errors;
+
+  // Keys should already be uppercase from Dashboard.tsx normalization
+  const availableKeys = new Set(Object.keys(rows[0]));
+
+  config.columns.forEach((col) => {
+    // Only check if Schema Required is true
+    if (col.isSchemaRequired && !availableKeys.has(col.columnName)) {
+      errors.push({
+        id: `struct-${config.tableType}-${col.columnName}`,
+        table: config.tableType,
+        rowId: 'HEADER',
+        siteId: 'SYSTEM',
+        column: col.columnName,
+        message: `Missing Column Header: Required column '${col.columnName}' was not found in the file.`,
+        severity: ValidationSeverity.CRITICAL,
+        type: 'STRUCTURE',
+      });
+    }
+  });
+
+  return errors;
 };
 
 /**
@@ -37,17 +70,17 @@ const validateIntegrity = (
   tableType: TableType
 ): ValidationError[] => {
   const errors: ValidationError[] = [];
-  const validSiteIds = new Set(collars.map((c) => c.site_id));
+  const validSiteIds = new Set(collars.map((c) => c.SITE_ID));
 
   rows.forEach((row) => {
-    if (!validSiteIds.has(row.site_id)) {
+    if (!validSiteIds.has(row.SITE_ID)) {
       const sId = safeSiteId(row);
       errors.push({
         id: `int-${tableType}-${row.id}`,
         table: tableType,
         rowId: row.id,
         siteId: sId,
-        column: 'site_id',
+        column: 'SITE_ID',
         message: `Orphan Record: Site ID '${sId}' does not exist in Collar table.`,
         severity: ValidationSeverity.CRITICAL,
         type: 'INTEGRITY',
@@ -68,19 +101,19 @@ const validateEOH = (
   tableType: TableType
 ): ValidationError[] => {
   const errors: ValidationError[] = [];
-  const collarMap = new Map(collars.map((c) => [c.site_id, safeFloat(c.total_depth)]));
+  const collarMap = new Map(collars.map((c) => [c.SITE_ID, safeFloat(c.TOTAL_DEPTH)]));
 
   rows.forEach((row) => {
-    const maxDepth = collarMap.get(row.site_id);
+    const maxDepth = collarMap.get(row.SITE_ID);
     if (maxDepth !== undefined) {
-      if (safeFloat(row.depth_to) > maxDepth) {
+      if (safeFloat(row.DEPTH_TO) > maxDepth) {
         errors.push({
           id: `eoh-${tableType}-${row.id}`,
           table: tableType,
           rowId: row.id,
           siteId: safeSiteId(row),
-          column: 'depth_to',
-          message: `Depth Exceeded: 'Depth To' (${row.depth_to}) exceeds Collar Total Depth (${maxDepth}).`,
+          column: 'DEPTH_TO',
+          message: `Depth Exceeded: 'DEPTH_TO' (${row.DEPTH_TO}) exceeds Collar TOTAL_DEPTH (${maxDepth}).`,
           severity: ValidationSeverity.CRITICAL,
           type: 'LOGIC',
         });
@@ -100,7 +133,7 @@ const validateIntervals = (
 ): ValidationError[] => {
   const errors: ValidationError[] = [];
   
-  // Group by Site ID using safe ID
+  // Group by Site ID
   const grouped: Record<string, IntervalRow[]> = {};
   rows.forEach((r) => {
     const sId = safeSiteId(r);
@@ -110,12 +143,12 @@ const validateIntervals = (
 
   Object.entries(grouped).forEach(([siteId, siteRows]) => {
     // Sort by Depth From
-    siteRows.sort((a, b) => safeFloat(a.depth_from) - safeFloat(b.depth_from));
+    siteRows.sort((a, b) => safeFloat(a.DEPTH_FROM) - safeFloat(b.DEPTH_FROM));
 
     for (let i = 0; i < siteRows.length; i++) {
       const current = siteRows[i];
-      const from = safeFloat(current.depth_from);
-      const to = safeFloat(current.depth_to);
+      const from = safeFloat(current.DEPTH_FROM);
+      const to = safeFloat(current.DEPTH_TO);
 
       // Zero Length
       if (from === to) {
@@ -124,7 +157,7 @@ const validateIntervals = (
           table: tableType,
           rowId: current.id,
           siteId: siteId,
-          column: 'depth_to',
+          column: 'DEPTH_TO',
           message: `Zero Length: Interval ${from} to ${to} has no length.`,
           severity: ValidationSeverity.WARNING,
           type: 'INTERVAL',
@@ -138,8 +171,8 @@ const validateIntervals = (
           table: tableType,
           rowId: current.id,
           siteId: siteId,
-          column: 'depth_from',
-          message: `Inverted Interval: Depth From (${from}) is greater than Depth To (${to}).`,
+          column: 'DEPTH_FROM',
+          message: `Inverted Interval: DEPTH_FROM (${from}) is greater than DEPTH_TO (${to}).`,
           severity: ValidationSeverity.CRITICAL,
           type: 'INTERVAL',
         });
@@ -148,7 +181,7 @@ const validateIntervals = (
       // Compare with previous for Overlap/Gap
       if (i > 0) {
         const prev = siteRows[i - 1];
-        const prevTo = safeFloat(prev.depth_to);
+        const prevTo = safeFloat(prev.DEPTH_TO);
 
         if (from < prevTo) {
           errors.push({
@@ -156,19 +189,18 @@ const validateIntervals = (
             table: tableType,
             rowId: current.id,
             siteId: siteId,
-            column: 'depth_from',
+            column: 'DEPTH_FROM',
             message: `Overlap: Starts at ${from} but previous ended at ${prevTo}.`,
             severity: ValidationSeverity.CRITICAL,
             type: 'INTERVAL',
           });
         } else if (from > prevTo) {
-          // Gaps are often just warnings/info in some systems, strictly enforcing here as warning
           errors.push({
             id: `gap-${tableType}-${current.id}`,
             table: tableType,
             rowId: current.id,
             siteId: siteId,
-            column: 'depth_from',
+            column: 'DEPTH_FROM',
             message: `Gap: Gap detected between ${prevTo} and ${from}.`,
             severity: ValidationSeverity.WARNING,
             type: 'INTERVAL',
@@ -198,7 +230,7 @@ const validateValues = (
     config.columns.forEach((colConfig) => {
       const value = row[colConfig.columnName];
       
-      // Mandatory Check
+      // Mandatory Value Check (Null/Empty Check)
       if (colConfig.isMandatory && (value === undefined || value === '' || value === null)) {
         errors.push({
           id: `req-${config.tableType}-${row.id}-${colConfig.columnName}`,
@@ -206,7 +238,7 @@ const validateValues = (
           rowId: row.id,
           siteId: sId,
           column: colConfig.columnName,
-          message: `Missing Value: ${colConfig.label} is mandatory.`,
+          message: `Missing Value: Data in '${colConfig.columnName}' cannot be empty.`,
           severity: ValidationSeverity.CRITICAL,
           type: 'VALUE',
         });
@@ -296,42 +328,45 @@ export const runValidation = (
   let allErrors: ValidationError[] = [];
 
   // --- 1. COLLAR CHECKS ---
-  // Basic value checks for Collar
   const collarConfig = configs.find(c => c.tableType === TableType.COLLAR);
   if (collarConfig) {
+      allErrors = [...allErrors, ...validateStructure(collarData, collarConfig)];
       allErrors = [...allErrors, ...validateValues(collarData, collarConfig, libraries)];
   }
 
   // --- 2. SURVEY CHECKS ---
-  // Integrity
+  const surveyConfig = configs.find(c => c.tableType === TableType.SURVEY);
+  if (surveyConfig) {
+     allErrors = [...allErrors, ...validateStructure(surveyData, surveyConfig)];
+     allErrors = [...allErrors, ...validateValues(surveyData, surveyConfig, libraries)];
+  }
+  
+  // Integrity & Logic for Survey
   allErrors = [...allErrors, ...validateIntegrity(collarData, surveyData, TableType.SURVEY)];
-  // Point Depth Check (Survey is point data, not interval, but must be within EOH)
-  const collarMap = new Map(collarData.map((c) => [c.site_id, safeFloat(c.total_depth)]));
+  const collarMap = new Map(collarData.map((c) => [c.SITE_ID, safeFloat(c.TOTAL_DEPTH)]));
+  
   surveyData.forEach(row => {
-    const max = collarMap.get(row.site_id);
-    if(max !== undefined && row.depth > max) {
+    const max = collarMap.get(row.SITE_ID);
+    if(max !== undefined && row.DEPTH > max) {
        allErrors.push({
           id: `eoh-surv-${row.id}`,
           table: TableType.SURVEY,
           rowId: row.id,
           siteId: safeSiteId(row),
-          column: 'depth',
-          message: `Survey Depth ${row.depth} exceeds EOH ${max}.`,
+          column: 'DEPTH',
+          message: `Survey Depth ${row.DEPTH} exceeds EOH ${max}.`,
           severity: ValidationSeverity.CRITICAL,
           type: 'LOGIC'
        })
     }
   });
-  // Values for Survey
-  const surveyConfig = configs.find(c => c.tableType === TableType.SURVEY);
-  if (surveyConfig) {
-     allErrors = [...allErrors, ...validateValues(surveyData, surveyConfig, libraries)];
-  }
 
   // Helper to run all standard interval checks for a table
   const validateGenericInterval = (data: IntervalRow[], type: TableType) => {
     const config = configs.find(c => c.tableType === type);
     if (config) {
+      // 0. Structure
+      allErrors = [...allErrors, ...validateStructure(data, config)];
       // 1. Integrity (Orphan checks)
       allErrors = [...allErrors, ...validateIntegrity(collarData, data, type)];
       // 2. EOH Checks

@@ -8,73 +8,73 @@ export const defaultConfigs: TableConfig[] = [
   {
     tableType: TableType.COLLAR,
     columns: [
-      { columnName: 'site_id', label: 'Site ID', isMandatory: true, type: 'string' },
-      { columnName: 'total_depth', label: 'Total Depth', isMandatory: true, type: 'float' },
+      { columnName: 'SITE_ID', label: 'Site ID', isSchemaRequired: true, isMandatory: true, type: 'string' },
+      { columnName: 'TOTAL_DEPTH', label: 'Total Depth', isSchemaRequired: true, isMandatory: true, type: 'float' },
     ],
   },
   {
     tableType: TableType.SURVEY,
     columns: [
-      { columnName: 'site_id', label: 'Site ID', isMandatory: true, type: 'string' },
-      { columnName: 'depth', label: 'Depth', isMandatory: true, type: 'float' },
-      { columnName: 'azimuth', label: 'Azimuth', isMandatory: true, type: 'float' },
-      { columnName: 'dip', label: 'Dip', isMandatory: true, type: 'float' },
+      { columnName: 'SITE_ID', label: 'Site ID', isSchemaRequired: true, isMandatory: true, type: 'string' },
+      { columnName: 'DEPTH', label: 'Depth', isSchemaRequired: true, isMandatory: true, type: 'float' },
+      { columnName: 'AZIMUTH', label: 'Azimuth', isSchemaRequired: true, isMandatory: true, type: 'float' },
+      { columnName: 'DIP', label: 'Dip', isSchemaRequired: true, isMandatory: true, type: 'float' },
     ],
   },
   {
     tableType: TableType.LITHOLOGY,
     columns: [
-      { columnName: 'site_id', label: 'Site ID', isMandatory: true, type: 'string' },
-      { columnName: 'depth_from', label: 'Depth From', isMandatory: true, type: 'float' },
-      { columnName: 'depth_to', label: 'Depth To', isMandatory: true, type: 'float' },
+      { columnName: 'SITE_ID', label: 'Site ID', isSchemaRequired: true, isMandatory: true, type: 'string' },
+      { columnName: 'DEPTH_FROM', label: 'Depth From', isSchemaRequired: true, isMandatory: true, type: 'float' },
+      { columnName: 'DEPTH_TO', label: 'Depth To', isSchemaRequired: true, isMandatory: true, type: 'float' },
     ],
   },
   {
     tableType: TableType.ASSAY,
     columns: [
-      { columnName: 'site_id', label: 'Site ID', isMandatory: true, type: 'string' },
-      { columnName: 'depth_from', label: 'Depth From', isMandatory: true, type: 'float' },
-      { columnName: 'depth_to', label: 'Depth To', isMandatory: true, type: 'float' },
+      { columnName: 'SITE_ID', label: 'Site ID', isSchemaRequired: true, isMandatory: true, type: 'string' },
+      { columnName: 'DEPTH_FROM', label: 'Depth From', isSchemaRequired: true, isMandatory: true, type: 'float' },
+      { columnName: 'DEPTH_TO', label: 'Depth To', isSchemaRequired: true, isMandatory: true, type: 'float' },
     ],
   },
   {
     tableType: TableType.MINERALIZATION,
     columns: [
-      { columnName: 'site_id', label: 'Site ID', isMandatory: true, type: 'string' },
-      { columnName: 'depth_from', label: 'Depth From', isMandatory: true, type: 'float' },
-      { columnName: 'depth_to', label: 'Depth To', isMandatory: true, type: 'float' },
+      { columnName: 'SITE_ID', label: 'Site ID', isSchemaRequired: true, isMandatory: true, type: 'string' },
+      { columnName: 'DEPTH_FROM', label: 'Depth From', isSchemaRequired: true, isMandatory: true, type: 'float' },
+      { columnName: 'DEPTH_TO', label: 'Depth To', isSchemaRequired: true, isMandatory: true, type: 'float' },
     ],
   },
   {
     tableType: TableType.OXIDATION,
     columns: [
-      { columnName: 'site_id', label: 'Site ID', isMandatory: true, type: 'string' },
-      { columnName: 'depth_from', label: 'Depth From', isMandatory: true, type: 'float' },
-      { columnName: 'depth_to', label: 'Depth To', isMandatory: true, type: 'float' },
+      { columnName: 'SITE_ID', label: 'Site ID', isSchemaRequired: true, isMandatory: true, type: 'string' },
+      { columnName: 'DEPTH_FROM', label: 'Depth From', isSchemaRequired: true, isMandatory: true, type: 'float' },
+      { columnName: 'DEPTH_TO', label: 'Depth To', isSchemaRequired: true, isMandatory: true, type: 'float' },
     ],
   },
   {
     tableType: TableType.GEOTECH,
     columns: [
-      { columnName: 'site_id', label: 'Site ID', isMandatory: true, type: 'string' },
-      { columnName: 'depth_from', label: 'Depth From', isMandatory: true, type: 'float' },
-      { columnName: 'depth_to', label: 'Depth To', isMandatory: true, type: 'float' },
+      { columnName: 'SITE_ID', label: 'Site ID', isSchemaRequired: true, isMandatory: true, type: 'string' },
+      { columnName: 'DEPTH_FROM', label: 'Depth From', isSchemaRequired: true, isMandatory: true, type: 'float' },
+      { columnName: 'DEPTH_TO', label: 'Depth To', isSchemaRequired: true, isMandatory: true, type: 'float' },
     ],
   },
   {
     tableType: TableType.RQD,
     columns: [
-      { columnName: 'site_id', label: 'Site ID', isMandatory: true, type: 'string' },
-      { columnName: 'depth_from', label: 'Depth From', isMandatory: true, type: 'float' },
-      { columnName: 'depth_to', label: 'Depth To', isMandatory: true, type: 'float' },
+      { columnName: 'SITE_ID', label: 'Site ID', isSchemaRequired: true, isMandatory: true, type: 'string' },
+      { columnName: 'DEPTH_FROM', label: 'Depth From', isSchemaRequired: true, isMandatory: true, type: 'float' },
+      { columnName: 'DEPTH_TO', label: 'Depth To', isSchemaRequired: true, isMandatory: true, type: 'float' },
     ],
   },
   {
     tableType: TableType.VEIN,
     columns: [
-      { columnName: 'site_id', label: 'Site ID', isMandatory: true, type: 'string' },
-      { columnName: 'depth_from', label: 'Depth From', isMandatory: true, type: 'float' },
-      { columnName: 'depth_to', label: 'Depth To', isMandatory: true, type: 'float' },
+      { columnName: 'SITE_ID', label: 'Site ID', isSchemaRequired: true, isMandatory: true, type: 'string' },
+      { columnName: 'DEPTH_FROM', label: 'Depth From', isSchemaRequired: true, isMandatory: true, type: 'float' },
+      { columnName: 'DEPTH_TO', label: 'Depth To', isSchemaRequired: true, isMandatory: true, type: 'float' },
     ],
   },
 ];

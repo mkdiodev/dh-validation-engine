@@ -10,6 +10,7 @@
         { "code": "BSL", "description": "Basalt" },
         { "code": "DIA", "description": "Diorite" },
         { "code": "QZV", "description": "Quartz Vein" },
+        { "code": "OVB", "description": "Overburden" },
         { "code": "CLY", "description": "Clay" }
       ]
     },

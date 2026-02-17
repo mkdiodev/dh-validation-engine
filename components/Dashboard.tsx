@@ -17,49 +17,39 @@ import { defaultConfigs, defaultLibraries, sampleAssay, sampleCollar, sampleLith
 import { userConfig } from '../data/userConfig';
 
 import { 
-  LucideLayoutDashboard, 
   LucideSettings, 
   LucideUpload, 
   LucidePlayCircle, 
   LucideAlertTriangle, 
   LucideCheckCircle, 
-  LucideFileText, 
   LucideFileSpreadsheet, 
-  LucideDownload, 
   LucideTrash2, 
-  LucideTable, 
   LucidePlus, 
   LucideX, 
-  LucideSave, 
-  LucideEdit3, 
   LucideBook, 
   LucideChevronDown, 
   LucideDatabase, 
-  LucideChevronRight, 
   LucideLayers, 
   LucideActivity, 
-  LucideMapPin, 
   LucideRotateCcw, 
   LucideInfo, 
-  LucideBox, 
   LucideSearch,
-  LucideFileJson,
-  LucideRefreshCw
+  LucideSave
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
-// --- Constants ---
+// --- Constants (UPPERCASE) ---
 
 const defaultExpectedColumns: Record<string, string[]> = {
-  [TableType.COLLAR]: ['site_id', 'total_depth', 'project_code', 'start_date', 'end_date', 'drill_type', 'x', 'y', 'z'],
-  [TableType.SURVEY]: ['site_id', 'depth', 'azimuth', 'dip', 'survey_method', 'date'],
-  [TableType.LITHOLOGY]: ['site_id', 'depth_from', 'depth_to', 'lith_code', 'description', 'texture', 'alteration', 'weathering'],
-  [TableType.ASSAY]: ['site_id', 'depth_from', 'depth_to', 'sample_id', 'au_ppm', 'ag_ppm', 'cu_pct', 'density', 'lab_job_no', 'weight'],
-  [TableType.MINERALIZATION]: ['site_id', 'depth_from', 'depth_to', 'min_code', 'percentage', 'style', 'intensity'],
-  [TableType.OXIDATION]: ['site_id', 'depth_from', 'depth_to', 'ox_code', 'intensity', 'base_of_complete_ox'],
-  [TableType.GEOTECH]: ['site_id', 'depth_from', 'depth_to', 'recovery', 'rock_strength', 'weathering', 'defect_count'],
-  [TableType.RQD]: ['site_id', 'depth_from', 'depth_to', 'rqd_percent', 'fracture_frequency'],
-  [TableType.VEIN]: ['site_id', 'depth_from', 'depth_to', 'vein_type', 'percentage', 'alpha_angle', 'beta_angle'],
+  [TableType.COLLAR]: ['SITE_ID', 'TOTAL_DEPTH', 'PROJECT_CODE', 'START_DATE', 'END_DATE', 'DRILL_TYPE', 'X', 'Y', 'Z'],
+  [TableType.SURVEY]: ['SITE_ID', 'DEPTH', 'AZIMUTH', 'DIP', 'SURVEY_METHOD', 'DATE'],
+  [TableType.LITHOLOGY]: ['SITE_ID', 'DEPTH_FROM', 'DEPTH_TO', 'LITH_CODE', 'DESCRIPTION', 'TEXTURE', 'ALTERATION', 'WEATHERING'],
+  [TableType.ASSAY]: ['SITE_ID', 'DEPTH_FROM', 'DEPTH_TO', 'SAMPLE_ID', 'AU_PPM', 'AG_PPM', 'CU_PCT', 'DENSITY', 'LAB_JOB_NO', 'WEIGHT'],
+  [TableType.MINERALIZATION]: ['SITE_ID', 'DEPTH_FROM', 'DEPTH_TO', 'MIN_CODE', 'PERCENTAGE', 'STYLE', 'INTENSITY'],
+  [TableType.OXIDATION]: ['SITE_ID', 'DEPTH_FROM', 'DEPTH_TO', 'OX_CODE', 'INTENSITY', 'BASE_OF_COMPLETE_OX'],
+  [TableType.GEOTECH]: ['SITE_ID', 'DEPTH_FROM', 'DEPTH_TO', 'RECOVERY', 'ROCK_STRENGTH', 'WEATHERING', 'DEFECT_COUNT'],
+  [TableType.RQD]: ['SITE_ID', 'DEPTH_FROM', 'DEPTH_TO', 'RQD_PERCENT', 'FRACTURE_FREQUENCY'],
+  [TableType.VEIN]: ['SITE_ID', 'DEPTH_FROM', 'DEPTH_TO', 'VEIN_TYPE', 'PERCENTAGE', 'ALPHA_ANGLE', 'BETA_ANGLE'],
 };
 
 // --- Helper Functions ---
@@ -67,30 +57,29 @@ const defaultExpectedColumns: Record<string, string[]> = {
 const normalizeHeaders = (data: any[]): any[] => {
   if (data.length === 0) return [];
   
-  // Standardize keys to lowercase snake_case for the app's internal logic
-  // e.g., "Hole ID" -> "site_id", "Au (ppm)" -> "au_ppm"
+  // Standardize keys to UPPERCASE SNAKE_CASE
+  // e.g., "Hole ID" -> "SITE_ID", "Au (ppm)" -> "AU_PPM"
   return data.map(row => {
     const newRow: any = {};
     Object.keys(row).forEach(key => {
-      let newKey = key.toLowerCase().trim()
+      let newKey = key.toUpperCase().trim()
         .replace(/[\s\(\)\.]+/g, '_') // Replace spaces, brackets, dots with underscore
         .replace(/_+$/, ''); // Remove trailing underscores
 
-      // Common mappings
-      // Map common variations of Hole ID / Site ID to 'site_id'
-      if (['holeid', 'hole_id', 'site_id', 'siteid', 'bh_id', 'bhid', 'borehole_id', 'hole'].includes(newKey)) {
-        newKey = 'site_id';
+      // Common mappings to Standard Keys
+      if (['HOLEID', 'HOLE_ID', 'SITEID', 'BH_ID', 'BHID', 'BOREHOLE_ID', 'HOLE'].includes(newKey)) {
+        newKey = 'SITE_ID';
       }
       
-      // Map variations of From/To to depth_from/depth_to
-      if (['from', 'depth_from', 'start', 'depth_start'].includes(newKey)) newKey = 'depth_from';
-      if (['to', 'depth_to', 'end', 'depth_end'].includes(newKey)) newKey = 'depth_to';
+      // Map variations of From/To
+      if (['FROM', 'START', 'DEPTH_START'].includes(newKey)) newKey = 'DEPTH_FROM';
+      if (['TO', 'END', 'DEPTH_END'].includes(newKey)) newKey = 'DEPTH_TO';
       
-      if (['id', 'record_id'].includes(newKey)) newKey = 'row_id'; // Avoid conflict if ID is reserved
+      if (['ID', 'RECORD_ID'].includes(newKey)) newKey = 'ROW_ID'; // Avoid conflict if ID is reserved
 
       newRow[newKey] = row[key];
     });
-    // Ensure every row has a unique ID for React keys and validation references
+    // Ensure every row has a unique internal ID for React keys and validation references
     if (!newRow.id) newRow.id = Math.random().toString(36).substr(2, 9);
     return newRow;
   });
@@ -117,8 +106,6 @@ const LibraryManager = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const importNewLibRef = useRef<HTMLInputElement>(null);
 
-  // Critical: When the `libraries` prop changes completely (e.g. after Import), 
-  // we must ensure activeLibId points to something valid.
   useEffect(() => {
     if (libraries.length === 0) {
       setActiveLibId('');
@@ -412,12 +399,6 @@ const LibraryManager = ({
                     />
                  </div>
               </div>
-              <div className="flex items-start gap-2 mb-4 p-2 bg-slate-50 border border-slate-100 rounded text-xs text-slate-500">
-                <LucideInfo className="w-4 h-4 text-slate-400 flex-shrink-0 mt-0.5" />
-                <p>
-                  <strong>Tip:</strong> You can upload a file with columns named <code className="bg-white border border-slate-200 px-1 rounded font-mono text-indigo-600">Code</code> and <code className="bg-white border border-slate-200 px-1 rounded font-mono text-indigo-600">Description</code>. If columns are not named, the first column will be used as Code.
-                </p>
-              </div>
               
               <div className="flex gap-2 mb-3 bg-slate-50 p-3 rounded-md border border-slate-100">
                 <input 
@@ -500,8 +481,7 @@ const ConfigPanel = ({
 
   const currentConfig = configs.find(c => c.tableType === activeTab);
   const detectedColumns = availableColumnsMap[activeTab] || [];
-  const isUsingDefaults = !hasDataMap[activeTab];
-
+  
   // Columns that exist in uploaded data (or defaults) but NOT in config
   const unconfiguredColumns = detectedColumns.filter(
     dc => !currentConfig?.columns.some(cc => cc.columnName === dc)
@@ -519,20 +499,18 @@ const ConfigPanel = ({
 
   const updateValidationType = (colName: string, type: 'none' | 'range' | 'lookup' | 'key') => {
     const changes: Partial<ColumnConfig> = {};
-    
-    // Reset validation options to ensure clean state
     changes.validation = {};
 
     if (type === 'none') {
        // already cleared
     } else if (type === 'range') {
-       changes.type = 'float'; // Force Number type for numeric ranges
+       changes.type = 'float'; 
        changes.validation = { range: { min: 0, strict: false } };
     } else if (type === 'lookup') {
-       changes.type = 'string'; // Force String type for Lookups
+       changes.type = 'string';
        changes.validation = { lookup: { libraryId: libraries[0]?.id || '', caseSensitive: false } };
     } else if (type === 'key') {
-       changes.type = 'string'; // Usually Hole IDs are strings
+       changes.type = 'string';
        changes.validation = { isKeyReference: true };
     }
     updateColumn(colName, changes);
@@ -549,11 +527,14 @@ const ConfigPanel = ({
 
   const addColumn = (name: string) => {
     if (!name.trim()) return;
+    const formattedName = name.trim().toUpperCase().replace(/\s+/g, '_');
+    
     const newCol: ColumnConfig = {
-      columnName: name.trim(),
-      label: name.trim().charAt(0).toUpperCase() + name.trim().slice(1).replace(/_/g, ' '),
-      isMandatory: false,
-      type: 'string', // Default
+      columnName: formattedName,
+      label: name.trim().charAt(0).toUpperCase() + name.trim().slice(1),
+      isSchemaRequired: false, // Default: Not required in header
+      isMandatory: false,      // Default: Nulls allowed
+      type: 'string', 
       validation: {}
     };
     
@@ -610,7 +591,8 @@ const ConfigPanel = ({
                 <thead className="bg-slate-50 text-[10px] text-slate-500 font-bold uppercase tracking-wider">
                   <tr>
                     <th className="px-6 py-4 min-w-[200px]">Column</th>
-                    <th className="px-6 py-4 text-center w-32">Mandatory</th>
+                    <th className="px-4 py-4 text-center w-24 bg-blue-50/50 text-blue-800">Header Required</th>
+                    <th className="px-4 py-4 text-center w-24 bg-red-50/50 text-red-800">No Nulls</th>
                     <th className="px-6 py-4 w-40">Data Type</th>
                     <th className="px-6 py-4 w-56">Validation Mode</th>
                     <th className="px-6 py-4 min-w-[300px]">Rules Configuration</th>
@@ -622,19 +604,28 @@ const ConfigPanel = ({
                     <tr key={col.columnName} className="hover:bg-slate-50/50 group transition-colors">
                       {/* Column Name */}
                       <td className="px-6 py-5 align-top">
-                        <div className="flex flex-col">
-                          <span className="font-semibold text-sm text-slate-800">{col.label}</span>
-                          <span className="text-xs text-slate-400 font-mono mt-0.5">{col.columnName}</span>
-                        </div>
+                        <span className="font-mono font-semibold text-sm text-slate-800">{col.columnName}</span>
                       </td>
                       
-                      {/* Mandatory Checkbox */}
-                      <td className="px-6 py-5 align-top text-center">
+                      {/* Schema Required Checkbox (Structure) */}
+                      <td className="px-4 py-5 align-top text-center bg-blue-50/30">
                          <input 
                            type="checkbox" 
-                           className="w-5 h-5 text-indigo-600 rounded bg-slate-100 border-slate-300 focus:ring-indigo-500 cursor-pointer"
+                           className="w-5 h-5 text-blue-600 rounded bg-white border-slate-300 focus:ring-blue-500 cursor-pointer"
+                           checked={col.isSchemaRequired}
+                           onChange={(e) => updateColumn(col.columnName, { isSchemaRequired: e.target.checked })}
+                           title="Check if this column header MUST exist in the uploaded file"
+                         />
+                      </td>
+
+                      {/* Mandatory Values Checkbox (Data) */}
+                      <td className="px-4 py-5 align-top text-center bg-red-50/30">
+                         <input 
+                           type="checkbox" 
+                           className="w-5 h-5 text-red-600 rounded bg-white border-slate-300 focus:ring-red-500 cursor-pointer"
                            checked={col.isMandatory}
                            onChange={(e) => updateColumn(col.columnName, { isMandatory: e.target.checked })}
+                           title="Check if rows cannot contain empty/null values"
                          />
                       </td>
                       
@@ -759,7 +750,7 @@ const ConfigPanel = ({
                {/* Option A: Pick from Uploaded Data */}
                <div className="flex flex-col gap-3">
                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                   Option 1: {isUsingDefaults ? "Select Detected Column (Default)" : "Select Detected Column (From File)"}
+                   Option 1: Select Detected Column (From File)
                  </label>
                  <div className="flex gap-2">
                     <div className="relative flex-1">
@@ -799,8 +790,8 @@ const ConfigPanel = ({
                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Option 2: Manually Add Column</label>
                  <div className="flex gap-2">
                    <input 
-                     className="flex-1 px-3 py-2 bg-slate-700 border border-transparent text-white placeholder-slate-400 rounded-md text-sm focus:ring-2 focus:ring-indigo-500 outline-none shadow-sm"
-                     placeholder="e.g. alteration_zone"
+                     className="flex-1 px-3 py-2 bg-slate-700 border border-transparent text-white placeholder-slate-400 rounded-md text-sm focus:ring-2 focus:ring-indigo-500 outline-none shadow-sm uppercase placeholder:normal-case"
+                     placeholder="e.g. ALTERATION_ZONE"
                      value={newColName}
                      onChange={e => setNewColName(e.target.value)}
                      onKeyDown={e => e.key === 'Enter' && addColumn(newColName)}
@@ -886,13 +877,13 @@ const DataImportCard = ({
     return data.filter(row => 
       Object.entries(row).some(([key, val]) => {
           // Skip internal ID fields if desired, but searching everything is usually fine
-          if (key === 'id' || key === 'row_id') return false; 
+          if (key === 'id' || key === 'ROW_ID') return false; 
           return val !== null && val !== undefined && String(val).toLowerCase().includes(lowerQuery);
       })
     );
   }, [data, searchQuery]);
 
-  const currentColumns = data.length > 0 ? Object.keys(data[0]).filter(k => k !== 'id' && k !== 'row_id') : [];
+  const currentColumns = data.length > 0 ? Object.keys(data[0]).filter(k => k !== 'id' && k !== 'ROW_ID') : [];
 
   return (
     <div className="bg-white h-full rounded-lg shadow-sm border border-slate-200 flex flex-col">
@@ -1049,7 +1040,6 @@ const Dashboard = () => {
   // UI Version State: Used to force remount of configuration components upon import/reset
   // This solves the issue where internal state (tabs, inputs) doesn't reset when parent props change.
   const [configUiVersion, setConfigUiVersion] = useState(0);
-  const importConfigRef = useRef<HTMLInputElement>(null);
 
   // UI State
   const [activeSection, setActiveSection] = useState<'import' | 'config' | 'validate'>('import');
@@ -1085,80 +1075,11 @@ const Dashboard = () => {
     downloadAnchorNode.remove();
   };
 
-  const handleImportConfig = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = (evt) => {
-      try {
-        const str = evt.target?.result as string;
-        const payload = JSON.parse(str);
-        
-        // Robust check for payload structure
-        if (payload.configs && Array.isArray(payload.configs)) {
-           const libraryCount = payload.libraries ? payload.libraries.length : 0;
-           const configCount = payload.configs.length;
-           const dateStr = payload.timestamp ? new Date(payload.timestamp).toLocaleString() : 'unknown date';
-
-           if(confirm(`Import configuration?\n\nDate: ${dateStr}\nRules: ${configCount} tables\nLibraries: ${libraryCount}\n\nThis will overwrite your current settings.`)) {
-             // 1. Immediately Overwrite LocalStorage (Persistence)
-             // This ensures that even if the page crashes or is reloaded manually, the new config is the source of truth.
-             localStorage.setItem('drillcore_configs', JSON.stringify(payload.configs));
-             localStorage.setItem('drillcore_libraries', JSON.stringify(payload.libraries || []));
-
-             // 2. Update React State
-             setConfigs(payload.configs);
-             setLibraries(payload.libraries || []); 
-             
-             // 3. Force UI Refresh
-             setConfigUiVersion(prev => prev + 1);
-
-             alert("Configuration imported successfully! Click 'Reload System' if you encounter any UI sync issues.");
-           }
-        } else {
-           alert("Error: Invalid configuration file. The JSON must contain a 'configs' array.");
-        }
-      } catch (err) {
-        console.error(err);
-        alert("Failed to parse the configuration file. Please ensure it is a valid JSON file exported from this application.");
-      } finally {
-        // Always reset input so the same file can be selected again if needed
-        if (importConfigRef.current) importConfigRef.current.value = '';
-      }
-    };
-    reader.readAsText(file);
-  };
-
-  const handleResetConfig = () => {
-    if (confirm("Reset configuration?\n\nThis will clear your local changes and revert to the 'userConfig' file stored in the project source.")) {
-      // 1. Reset to User Config File (or defaults if missing)
-      const resetConfigs = JSON.parse(JSON.stringify(userConfig.configs || defaultConfigs));
-      const resetLibs = JSON.parse(JSON.stringify(userConfig.libraries || defaultLibraries));
-
-      setConfigs(resetConfigs);
-      setLibraries(resetLibs);
-      
-      // 2. Clear LocalStorage so the JSON file remains the source of truth
-      localStorage.removeItem('drillcore_configs');
-      localStorage.removeItem('drillcore_libraries');
-
-      // 3. Force UI Refresh
-      setConfigUiVersion(prev => prev + 1);
-    }
-  };
-
-  const handleReloadApp = () => {
-    if(confirm("Reload the application?\n\nThis will refresh the page and load the latest configuration from storage.")) {
-      window.location.reload();
-    }
-  };
-
   // ... memoized helpers ...
   // Helper to get columns from data for ConfigPanel
   const getAvailableColumns = (data: any[]) => {
       if (data.length === 0) return [];
-      return Object.keys(data[0]).filter(k => k !== 'id' && k !== 'row_id');
+      return Object.keys(data[0]).filter(k => k !== 'id' && k !== 'ROW_ID');
   };
 
   const availableColumnsMap = useMemo(() => ({
@@ -1278,48 +1199,13 @@ const Dashboard = () => {
                </p>
              </div>
              <div className="flex gap-3">
-                <input 
-                  type="file" 
-                  ref={importConfigRef} 
-                  onChange={handleImportConfig} 
-                  className="hidden" 
-                  accept=".json"
-                />
-                
-                <button 
-                   onClick={handleReloadApp}
-                   className="flex items-center gap-2 px-3 py-2 bg-amber-50 border border-amber-200 text-amber-700 hover:bg-amber-100 rounded-md text-sm font-medium transition-all shadow-sm"
-                   title="Reload Application to apply changes strictly"
-                 >
-                   <LucideRefreshCw className="w-4 h-4" />
-                   Reload System
-                 </button>
-
-                 <div className="w-px h-8 bg-slate-200 mx-1"></div>
-
-                <button 
-                   onClick={() => importConfigRef.current?.click()}
-                   className="flex items-center gap-2 px-3 py-2 bg-white border border-slate-300 text-slate-600 hover:bg-slate-50 rounded-md text-sm font-medium transition-all shadow-sm"
-                   title="Import Configuration from JSON"
-                 >
-                   <LucideUpload className="w-4 h-4" />
-                   Import
-                 </button>
-                <div className="w-px h-8 bg-slate-200 mx-1"></div>
-                <button 
-                   onClick={handleResetConfig}
-                   className="flex items-center gap-2 px-3 py-2 bg-white border border-slate-300 text-slate-600 hover:bg-slate-50 rounded-md text-sm font-medium transition-all shadow-sm"
-                 >
-                   <LucideRotateCcw className="w-4 h-4" />
-                   Reset to Defaults
-                 </button>
                 <button 
                    onClick={handleExportConfig}
                    className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-md text-sm font-medium transition-all shadow-sm"
                    title="Download config to update the codebase"
                  >
-                   <LucideFileJson className="w-4 h-4" />
-                   Download Master Config
+                   <LucideSave className="w-4 h-4" />
+                   Save Configuration
                  </button>
              </div>
            </div>

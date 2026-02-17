@@ -1,143 +1,78 @@
-
 export const userConfig = {
   "timestamp": "2024-01-01T00:00:00.000Z",
   "version": "1.0",
-  "libraries": [
-    {
-      "id": "lithology_lib_01",
-      "name": "Standard Lithology",
-      "items": [
-        { "code": "AND", "description": "Andesite" },
-        { "code": "BSL", "description": "Basalt" },
-        { "code": "DIA", "description": "Diorite" },
-        { "code": "QZV", "description": "Quartz Vein" },
-        { "code": "CLY", "description": "Clay" }
-      ]
-    },
-    {
-      "id": "color_lib_01",
-      "name": "Rock Colors",
-      "items": [
-        { "code": "GY", "description": "Grey" },
-        { "code": "BR", "description": "Brown" },
-        { "code": "GN", "description": "Green" },
-        { "code": "RD", "description": "Red" }
-      ]
-    }
-  ],
+  "libraries": [],
   "configs": [
     {
       "tableType": "COLLAR",
       "columns": [
-        { "columnName": "site_id", "label": "Site ID", "isMandatory": true, "type": "string" },
-        { "columnName": "total_depth", "label": "Total Depth", "isMandatory": true, "type": "float", "validation": { "range": { "min": 0, "max": 2000, "strict": true } } }
+        { "columnName": "SITE_ID", "label": "Site ID", "isSchemaRequired": true, "isMandatory": true, "type": "string" },
+        { "columnName": "TOTAL_DEPTH", "label": "Total Depth", "isSchemaRequired": true, "isMandatory": true, "type": "float", "validation": { "range": { "min": 0, "max": 2000, "strict": true } } }
       ]
     },
     {
       "tableType": "SURVEY",
       "columns": [
-        { "columnName": "site_id", "label": "Site ID", "isMandatory": true, "type": "string" },
-        { "columnName": "depth", "label": "Depth", "isMandatory": true, "type": "float" },
-        { "columnName": "azimuth", "label": "Azimuth", "isMandatory": true, "type": "float", "validation": { "range": { "min": 0, "max": 360, "strict": true } } },
-        { "columnName": "dip", "label": "Dip", "isMandatory": true, "type": "float", "validation": { "range": { "min": -90, "max": 90, "strict": true } } }
+        { "columnName": "SITE_ID", "label": "Site ID", "isSchemaRequired": true, "isMandatory": true, "type": "string" },
+        { "columnName": "DEPTH", "label": "Depth", "isSchemaRequired": true, "isMandatory": true, "type": "float" },
+        { "columnName": "AZIMUTH", "label": "Azimuth", "isSchemaRequired": true, "isMandatory": true, "type": "float", "validation": { "range": { "min": 0, "max": 360, "strict": true } } },
+        { "columnName": "DIP", "label": "Dip", "isSchemaRequired": true, "isMandatory": true, "type": "float", "validation": { "range": { "min": -90, "max": 90, "strict": true } } }
       ]
     },
     {
       "tableType": "LITHOLOGY",
       "columns": [
-        { "columnName": "site_id", "label": "Site ID", "isMandatory": true, "type": "string" },
-        { "columnName": "depth_from", "label": "Depth From", "isMandatory": true, "type": "float" },
-        { "columnName": "depth_to", "label": "Depth To", "isMandatory": true, "type": "float" },
-        { 
-          "columnName": "lith_code", 
-          "label": "Lith Code", 
-          "isMandatory": true, 
-          "type": "string",
-          "validation": { "lookup": { "libraryId": "lithology_lib_01", "caseSensitive": false } }
-        },
-        { 
-          "columnName": "color", 
-          "label": "Color", 
-          "isMandatory": false, 
-          "type": "string",
-          "validation": { "lookup": { "libraryId": "color_lib_01", "caseSensitive": false } }
-        }
+        { "columnName": "SITE_ID", "label": "Site ID", "isSchemaRequired": true, "isMandatory": true, "type": "string" },
+        { "columnName": "DEPTH_FROM", "label": "Depth From", "isSchemaRequired": true, "isMandatory": true, "type": "float" },
+        { "columnName": "DEPTH_TO", "label": "Depth To", "isSchemaRequired": true, "isMandatory": true, "type": "float" }
       ]
     },
     {
       "tableType": "ASSAY",
       "columns": [
-        { "columnName": "site_id", "label": "Site ID", "isMandatory": true, "type": "string" },
-        { "columnName": "depth_from", "label": "Depth From", "isMandatory": true, "type": "float" },
-        { "columnName": "depth_to", "label": "Depth To", "isMandatory": true, "type": "float" },
-        { 
-          "columnName": "au_ppm", 
-          "label": "Au (ppm)", 
-          "isMandatory": false, 
-          "type": "float",
-          "validation": { "range": { "min": 0, "max": 1000, "strict": false } }
-        },
-        { 
-          "columnName": "ag_ppm", 
-          "label": "Ag (ppm)", 
-          "isMandatory": false, 
-          "type": "float",
-          "validation": { "range": { "min": 0, "max": 5000, "strict": false } }
-        },
-        { 
-          "columnName": "density", 
-          "label": "Density", 
-          "isMandatory": false, 
-          "type": "float",
-          "validation": { "range": { "min": 1.5, "max": 4.5, "strict": false } }
-        }
+        { "columnName": "SITE_ID", "label": "Site ID", "isSchemaRequired": true, "isMandatory": true, "type": "string" },
+        { "columnName": "DEPTH_FROM", "label": "Depth From", "isSchemaRequired": true, "isMandatory": true, "type": "float" },
+        { "columnName": "DEPTH_TO", "label": "Depth To", "isSchemaRequired": true, "isMandatory": true, "type": "float" }
       ]
     },
     {
       "tableType": "MINERALIZATION",
       "columns": [
-        { "columnName": "site_id", "label": "Site ID", "isMandatory": true, "type": "string" },
-        { "columnName": "depth_from", "label": "Depth From", "isMandatory": true, "type": "float" },
-        { "columnName": "depth_to", "label": "Depth To", "isMandatory": true, "type": "float" }
+        { "columnName": "SITE_ID", "label": "Site ID", "isSchemaRequired": true, "isMandatory": true, "type": "string" },
+        { "columnName": "DEPTH_FROM", "label": "Depth From", "isSchemaRequired": true, "isMandatory": true, "type": "float" },
+        { "columnName": "DEPTH_TO", "label": "Depth To", "isSchemaRequired": true, "isMandatory": true, "type": "float" }
       ]
     },
     {
       "tableType": "OXIDATION",
       "columns": [
-        { "columnName": "site_id", "label": "Site ID", "isMandatory": true, "type": "string" },
-        { "columnName": "depth_from", "label": "Depth From", "isMandatory": true, "type": "float" },
-        { "columnName": "depth_to", "label": "Depth To", "isMandatory": true, "type": "float" }
+        { "columnName": "SITE_ID", "label": "Site ID", "isSchemaRequired": true, "isMandatory": true, "type": "string" },
+        { "columnName": "DEPTH_FROM", "label": "Depth From", "isSchemaRequired": true, "isMandatory": true, "type": "float" },
+        { "columnName": "DEPTH_TO", "label": "Depth To", "isSchemaRequired": true, "isMandatory": true, "type": "float" }
       ]
     },
     {
       "tableType": "GEOTECH",
       "columns": [
-        { "columnName": "site_id", "label": "Site ID", "isMandatory": true, "type": "string" },
-        { "columnName": "depth_from", "label": "Depth From", "isMandatory": true, "type": "float" },
-        { "columnName": "depth_to", "label": "Depth To", "isMandatory": true, "type": "float" },
-        { 
-          "columnName": "recovery", 
-          "label": "Recovery %", 
-          "isMandatory": false, 
-          "type": "float",
-          "validation": { "range": { "min": 0, "max": 100, "strict": true } }
-        }
+        { "columnName": "SITE_ID", "label": "Site ID", "isSchemaRequired": true, "isMandatory": true, "type": "string" },
+        { "columnName": "DEPTH_FROM", "label": "Depth From", "isSchemaRequired": true, "isMandatory": true, "type": "float" },
+        { "columnName": "DEPTH_TO", "label": "Depth To", "isSchemaRequired": true, "isMandatory": true, "type": "float" }
       ]
     },
     {
       "tableType": "RQD",
       "columns": [
-        { "columnName": "site_id", "label": "Site ID", "isMandatory": true, "type": "string" },
-        { "columnName": "depth_from", "label": "Depth From", "isMandatory": true, "type": "float" },
-        { "columnName": "depth_to", "label": "Depth To", "isMandatory": true, "type": "float" }
+        { "columnName": "SITE_ID", "label": "Site ID", "isSchemaRequired": true, "isMandatory": true, "type": "string" },
+        { "columnName": "DEPTH_FROM", "label": "Depth From", "isSchemaRequired": true, "isMandatory": true, "type": "float" },
+        { "columnName": "DEPTH_TO", "label": "Depth To", "isSchemaRequired": true, "isMandatory": true, "type": "float" }
       ]
     },
     {
       "tableType": "VEIN",
       "columns": [
-        { "columnName": "site_id", "label": "Site ID", "isMandatory": true, "type": "string" },
-        { "columnName": "depth_from", "label": "Depth From", "isMandatory": true, "type": "float" },
-        { "columnName": "depth_to", "label": "Depth To", "isMandatory": true, "type": "float" }
+        { "columnName": "SITE_ID", "label": "Site ID", "isSchemaRequired": true, "isMandatory": true, "type": "string" },
+        { "columnName": "DEPTH_FROM", "label": "Depth From", "isSchemaRequired": true, "isMandatory": true, "type": "float" },
+        { "columnName": "DEPTH_TO", "label": "Depth To", "isSchemaRequired": true, "isMandatory": true, "type": "float" }
       ]
     }
   ]

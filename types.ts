@@ -16,29 +16,29 @@ export enum TableType {
   VEIN = 'VEIN',
 }
 
-// Data Row Interfaces
+// Data Row Interfaces - Uppercase Standardization
 export interface CollarRow {
-  id: string; // Unique ID
-  site_id: string; // Changed from hole_id
-  total_depth: number;
+  id: string; // Unique ID (Internal)
+  SITE_ID: string; 
+  TOTAL_DEPTH: number;
   [key: string]: any;
 }
 
 export interface SurveyRow {
   id: string;
-  site_id: string; // Changed from hole_id
-  depth: number;
-  azimuth: number;
-  dip: number;
+  SITE_ID: string;
+  DEPTH: number;
+  AZIMUTH: number;
+  DIP: number;
   [key: string]: any;
 }
 
 export interface IntervalRow {
   id: string;
-  site_id: string; // Changed from hole_id
-  depth_from: number; // Changed from from
-  depth_to: number; // Changed from to
-  [key: string]: any; // Allows for lith_code, Au_ppm, etc.
+  SITE_ID: string;
+  DEPTH_FROM: number;
+  DEPTH_TO: number;
+  [key: string]: any; 
 }
 
 // Configuration Interfaces
@@ -54,9 +54,10 @@ export interface LookupRule {
 }
 
 export interface ColumnConfig {
-  columnName: string;
+  columnName: string; // Stored in UPPERCASE
   label: string;
-  isMandatory: boolean;
+  isSchemaRequired: boolean; // NEW: Column Header must exist in file
+  isMandatory: boolean;      // EXISTING: Values in row must not be null/empty
   type: 'string' | 'number' | 'float';
   validation?: {
     range?: RangeRule;
@@ -86,11 +87,11 @@ export interface ValidationError {
   id: string;
   table: TableType;
   rowId: string;
-  siteId: string; // Changed from holeId
+  siteId: string;
   column?: string;
   message: string;
   severity: ValidationSeverity;
-  type: 'INTEGRITY' | 'INTERVAL' | 'VALUE' | 'LOGIC';
+  type: 'INTEGRITY' | 'INTERVAL' | 'VALUE' | 'LOGIC' | 'STRUCTURE';
 }
 
 export interface ValidationSummary {
