@@ -1022,7 +1022,6 @@ const Dashboard = () => {
             try {
                 const parsed = JSON.parse(saved) as TableConfig[];
                 // Ensure all tables from defaultConfigs are present
-                const allConfigTypes = new Set(defaultConfigs.map(c => c.tableType));
                 const savedConfigTypes = new Set(parsed.map(c => c.tableType));
                 
                 // If any default config is missing in saved, add it
@@ -1084,7 +1083,6 @@ const Dashboard = () => {
           let configs = supabaseConfig.configs as TableConfig[];
           
           // Ensure all tables from defaultConfigs are present
-          const allConfigTypes = new Set(defaultConfigs.map(c => c.tableType));
           const loadedConfigTypes = new Set(configs.map(c => c.tableType));
           
           // If any default config is missing in loaded, add it
