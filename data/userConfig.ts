@@ -74,6 +74,22 @@ export const userConfig = {
         { "columnName": "DEPTH_FROM", "label": "Depth From", "isSchemaRequired": true, "isMandatory": true, "type": "float" },
         { "columnName": "DEPTH_TO", "label": "Depth To", "isSchemaRequired": true, "isMandatory": true, "type": "float" }
       ]
+    },
+    {
+      "tableType": "ALTERATION",
+      "columns": [
+        { "columnName": "SITE_ID", "label": "Site ID", "isSchemaRequired": true, "isMandatory": true, "type": "string" },
+        { "columnName": "DEPTH_FROM", "label": "Depth From", "isSchemaRequired": true, "isMandatory": true, "type": "float" },
+        { "columnName": "DEPTH_TO", "label": "Depth To", "isSchemaRequired": true, "isMandatory": true, "type": "float" }
+      ]
+    },
+    {
+      "tableType": "DENSITY",
+      "columns": [
+        { "columnName": "SITE_ID", "label": "Site ID", "isSchemaRequired": true, "isMandatory": true, "type": "string" },
+        { "columnName": "DEPTH_FROM", "label": "Depth From", "isSchemaRequired": true, "isMandatory": true, "type": "float" },
+        { "columnName": "DEPTH_TO", "label": "Depth To", "isSchemaRequired": true, "isMandatory": true, "type": "float" }
+      ]
     }
   ]
 };

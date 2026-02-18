@@ -77,6 +77,22 @@ export const defaultConfigs: TableConfig[] = [
       { columnName: 'DEPTH_TO', label: 'Depth To', isSchemaRequired: true, isMandatory: true, type: 'float' },
     ],
   },
+  {
+    tableType: TableType.ALTERATION,
+    columns: [
+      { columnName: 'SITE_ID', label: 'Site ID', isSchemaRequired: true, isMandatory: true, type: 'string' },
+      { columnName: 'DEPTH_FROM', label: 'Depth From', isSchemaRequired: true, isMandatory: true, type: 'float' },
+      { columnName: 'DEPTH_TO', label: 'Depth To', isSchemaRequired: true, isMandatory: true, type: 'float' },
+    ],
+  },
+  {
+    tableType: TableType.DENSITY,
+    columns: [
+      { columnName: 'SITE_ID', label: 'Site ID', isSchemaRequired: true, isMandatory: true, type: 'string' },
+      { columnName: 'DEPTH_FROM', label: 'Depth From', isSchemaRequired: true, isMandatory: true, type: 'float' },
+      { columnName: 'DEPTH_TO', label: 'Depth To', isSchemaRequired: true, isMandatory: true, type: 'float' },
+    ],
+  },
 ];
 
 // Sample Data (Empty)
@@ -89,3 +105,5 @@ export const sampleOxidation: IntervalRow[] = [];
 export const sampleGeotech: IntervalRow[] = [];
 export const sampleRQD: IntervalRow[] = [];
 export const sampleVein: IntervalRow[] = [];
+export const sampleAlteration: IntervalRow[] = [];
+export const sampleDensity: IntervalRow[] = [];

@@ -14,6 +14,8 @@ export enum TableType {
   GEOTECH = 'GEOTECH',
   RQD = 'RQD',
   VEIN = 'VEIN',
+  ALTERATION = 'ALTERATION',
+  DENSITY = 'DENSITY',
 }
 
 // Data Row Interfaces - Uppercase Standardization

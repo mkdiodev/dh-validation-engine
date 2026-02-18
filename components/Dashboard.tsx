@@ -12,7 +12,7 @@ import {
   LibraryItem
 } from '../types';
 import { runValidation } from '../services/validationEngine';
-import { defaultConfigs, defaultLibraries, sampleAssay, sampleCollar, sampleLithology, sampleSurvey, sampleMineralization, sampleOxidation, sampleGeotech, sampleRQD, sampleVein } from '../data/defaults';
+import { defaultConfigs, defaultLibraries, sampleAssay, sampleCollar, sampleLithology, sampleSurvey, sampleMineralization, sampleOxidation, sampleGeotech, sampleRQD, sampleVein, sampleAlteration, sampleDensity } from '../data/defaults';
 // Import the User Config from TS file
 import { userConfig } from '../data/userConfig';
 // Import Supabase functions for config persistence
@@ -52,6 +52,8 @@ const defaultExpectedColumns: Record<string, string[]> = {
   [TableType.GEOTECH]: ['SITE_ID', 'DEPTH_FROM', 'DEPTH_TO', 'RECOVERY', 'ROCK_STRENGTH', 'WEATHERING', 'DEFECT_COUNT'],
   [TableType.RQD]: ['SITE_ID', 'DEPTH_FROM', 'DEPTH_TO', 'RQD_PERCENT', 'FRACTURE_FREQUENCY'],
   [TableType.VEIN]: ['SITE_ID', 'DEPTH_FROM', 'DEPTH_TO', 'VEIN_TYPE', 'PERCENTAGE', 'ALPHA_ANGLE', 'BETA_ANGLE'],
+  [TableType.ALTERATION]: ['SITE_ID', 'DEPTH_FROM', 'DEPTH_TO', 'ALTER_TYPE', 'INTENSITY', 'MINERALOGY'],
+  [TableType.DENSITY]: ['SITE_ID', 'DEPTH_FROM', 'DEPTH_TO', 'DENSITY_VALUE', 'MEASUREMENT_METHOD'],
 };
 
 // --- Helper Functions ---
@@ -562,7 +564,9 @@ const ConfigPanel = ({
     TableType.OXIDATION, 
     TableType.GEOTECH, 
     TableType.RQD, 
-    TableType.VEIN
+    TableType.VEIN,
+    TableType.ALTERATION,
+    TableType.DENSITY
   ];
 
   return (
@@ -1004,6 +1008,8 @@ const Dashboard = () => {
   const [geotechData, setGeotechData] = useState<any[]>(sampleGeotech);
   const [rqdData, setRqdData] = useState<any[]>(sampleRQD);
   const [veinData, setVeinData] = useState<any[]>(sampleVein);
+  const [alterationData, setAlterationData] = useState<any[]>(sampleAlteration);
+  const [densityData, setDensityData] = useState<any[]>(sampleDensity);
 
   // Config State with Persistence Logic:
   // 1. Try LocalStorage (Recent Edits)
@@ -1014,7 +1020,19 @@ const Dashboard = () => {
         const saved = localStorage.getItem('drillcore_configs');
         if (saved) {
             try {
-                return JSON.parse(saved);
+                const parsed = JSON.parse(saved) as TableConfig[];
+                // Ensure all tables from defaultConfigs are present
+                const allConfigTypes = new Set(defaultConfigs.map(c => c.tableType));
+                const savedConfigTypes = new Set(parsed.map(c => c.tableType));
+                
+                // If any default config is missing in saved, add it
+                const missingConfigs = defaultConfigs.filter(dc => !savedConfigTypes.has(dc.tableType));
+                if (missingConfigs.length > 0) {
+                  console.log(`Adding missing table configs: ${missingConfigs.map(c => c.tableType).join(', ')}`);
+                  return [...parsed, ...missingConfigs];
+                }
+                
+                return parsed;
             } catch (e) {
                 console.error("Error parsing saved configs", e);
             }
@@ -1063,7 +1081,20 @@ const Dashboard = () => {
       try {
         const supabaseConfig = await loadConfigFromSupabase();
         if (supabaseConfig?.configs && supabaseConfig?.libraries) {
-          setConfigs(supabaseConfig.configs as TableConfig[]);
+          let configs = supabaseConfig.configs as TableConfig[];
+          
+          // Ensure all tables from defaultConfigs are present
+          const allConfigTypes = new Set(defaultConfigs.map(c => c.tableType));
+          const loadedConfigTypes = new Set(configs.map(c => c.tableType));
+          
+          // If any default config is missing in loaded, add it
+          const missingConfigs = defaultConfigs.filter(dc => !loadedConfigTypes.has(dc.tableType));
+          if (missingConfigs.length > 0) {
+            console.log(`Adding missing table configs to Supabase load: ${missingConfigs.map(c => c.tableType).join(', ')}`);
+            configs = [...configs, ...missingConfigs];
+          }
+          
+          setConfigs(configs);
           setLibraries(supabaseConfig.libraries as CodeLibrary[]);
           setSyncStatus('synced');
           console.log('Config loaded from Supabase');
@@ -1146,7 +1177,9 @@ const Dashboard = () => {
     [TableType.GEOTECH]: getAvailableColumns(geotechData),
     [TableType.RQD]: getAvailableColumns(rqdData),
     [TableType.VEIN]: getAvailableColumns(veinData),
-  }), [collarData, surveyData, lithologyData, assayData, mineralizationData, oxidationData, geotechData, rqdData, veinData]);
+    [TableType.ALTERATION]: getAvailableColumns(alterationData),
+    [TableType.DENSITY]: getAvailableColumns(densityData),
+  }), [collarData, surveyData, lithologyData, assayData, mineralizationData, oxidationData, geotechData, rqdData, veinData, alterationData, densityData]);
 
   const hasDataMap = useMemo(() => ({
     [TableType.COLLAR]: collarData.length > 0,
@@ -1158,7 +1191,9 @@ const Dashboard = () => {
     [TableType.GEOTECH]: geotechData.length > 0,
     [TableType.RQD]: rqdData.length > 0,
     [TableType.VEIN]: veinData.length > 0,
-  }), [collarData, surveyData, lithologyData, assayData, mineralizationData, oxidationData, geotechData, rqdData, veinData]);
+    [TableType.ALTERATION]: alterationData.length > 0,
+    [TableType.DENSITY]: densityData.length > 0,
+  }), [collarData, surveyData, lithologyData, assayData, mineralizationData, oxidationData, geotechData, rqdData, veinData, alterationData, densityData]);
 
 
   const handleRunValidation = () => {
@@ -1172,6 +1207,8 @@ const Dashboard = () => {
       geotechData as IntervalRow[],
       rqdData as IntervalRow[],
       veinData as IntervalRow[],
+      alterationData as IntervalRow[],
+      densityData as IntervalRow[],
       configs,
       libraries
     );
@@ -1189,6 +1226,8 @@ const Dashboard = () => {
       case TableType.GEOTECH: return setGeotechData;
       case TableType.RQD: return setRqdData;
       case TableType.VEIN: return setVeinData;
+      case TableType.ALTERATION: return setAlterationData;
+      case TableType.DENSITY: return setDensityData;
       default: return () => {};
     }
   };
@@ -1204,6 +1243,8 @@ const Dashboard = () => {
       case TableType.GEOTECH: return geotechData;
       case TableType.RQD: return rqdData;
       case TableType.VEIN: return veinData;
+      case TableType.ALTERATION: return alterationData;
+      case TableType.DENSITY: return densityData;
       default: return [];
     }
   };

@@ -322,6 +322,8 @@ export const runValidation = (
   geotechData: IntervalRow[],
   rqdData: IntervalRow[],
   veinData: IntervalRow[],
+  alterationData: IntervalRow[],
+  densityData: IntervalRow[],
   configs: TableConfig[],
   libraries: CodeLibrary[]
 ): ValidationSummary => {
@@ -386,6 +388,8 @@ export const runValidation = (
   validateGenericInterval(geotechData, TableType.GEOTECH);
   validateGenericInterval(rqdData, TableType.RQD);
   validateGenericInterval(veinData, TableType.VEIN);
+  validateGenericInterval(alterationData, TableType.ALTERATION);
+  validateGenericInterval(densityData, TableType.DENSITY);
 
   // --- Summary Calculation ---
   const totalErrors = allErrors.filter((e) => e.severity === ValidationSeverity.CRITICAL).length;
