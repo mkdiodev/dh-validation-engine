@@ -43,7 +43,7 @@ import * as XLSX from 'xlsx';
 // --- Constants (UPPERCASE) ---
 
 const defaultExpectedColumns: Record<string, string[]> = {
-  [TableType.COLLAR]: ['SITE_ID', 'TOTAL_DEPTH', 'PROJECT_CODE', 'START_DATE', 'END_DATE', 'DRILL_TYPE', 'X', 'Y', 'Z'],
+  [TableType.COLLAR]: ['SITE_ID', 'END_DEPTH', 'PROJECT_CODE', 'START_DATE', 'END_DATE', 'DRILL_TYPE', 'X', 'Y', 'Z'],
   [TableType.SURVEY]: ['SITE_ID', 'DEPTH', 'AZIMUTH', 'DIP', 'SURVEY_METHOD', 'DATE'],
   [TableType.LITHOLOGY]: ['SITE_ID', 'DEPTH_FROM', 'DEPTH_TO', 'LITH_CODE', 'DESCRIPTION', 'TEXTURE', 'ALTERATION', 'WEATHERING'],
   [TableType.ASSAY]: ['SITE_ID', 'DEPTH_FROM', 'DEPTH_TO', 'SAMPLE_ID', 'AU_PPM', 'AG_PPM', 'CU_PCT', 'DENSITY', 'LAB_JOB_NO', 'WEIGHT'],
@@ -1518,7 +1518,7 @@ const Dashboard = () => {
             </div>
             <div className="flex items-center gap-4">
               <div className="text-right">
-                 <div className="text-xs font-bold text-slate-700">Project: Demo_2024</div>
+                 <div className="text-xs font-bold text-slate-700">Project: Demo_2026</div>
                  <div className="text-[10px] text-slate-400">Last saved: Just now</div>
               </div>
               <div className="w-8 h-8 bg-slate-200 rounded-full flex items-center justify-center text-slate-500 font-bold text-xs border border-slate-300">

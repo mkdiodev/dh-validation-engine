@@ -93,7 +93,10 @@ const validateIntegrity = (
 
 /**
  * 2. EOH Consistency
- * Max(To) <= Collar.Total_Depth
+ * Max(To) <= Collar.END_DEPTH (critical error per row)
+ * plus bottom‑of‑hole coverage – deepest interval should reach total depth
+ * (warning unless the hole already has an over‑EOH error, in which case
+ * it stays critical to avoid hiding the original problem).
  */
 const validateEOH = (
   collars: CollarRow[],
@@ -101,23 +104,59 @@ const validateEOH = (
   tableType: TableType
 ): ValidationError[] => {
   const errors: ValidationError[] = [];
-  const collarMap = new Map(collars.map((c) => [c.SITE_ID, safeFloat(c.TOTAL_DEPTH)]));
+
+  // build lookup of collar total depths
+  const collarMap = new Map(collars.map((c) => [c.SITE_ID, safeFloat(c.END_DEPTH)]));
+  // track the deepest "to" value seen for each hole
+  const maxToBySite = new Map<string, number>();
+  // mark sites that already had an over‑EOH row
+  const overSites = new Set<string>();
+
+  const TOLERANCE = 0.01; // allow small floating point variance, generous to avoid false positives
 
   rows.forEach((row) => {
-    const maxDepth = collarMap.get(row.SITE_ID);
-    if (maxDepth !== undefined) {
-      if (safeFloat(row.DEPTH_TO) > maxDepth) {
+    const siteId = row.SITE_ID;
+    const toVal = safeFloat(row.DEPTH_TO);
+
+    // remember largest to for bottom‑of‑hole check later
+    const prevMax = maxToBySite.get(siteId);
+    if (prevMax === undefined || toVal > prevMax) {
+      maxToBySite.set(siteId, toVal);
+    }
+
+    const maxDepth = collarMap.get(siteId);
+    if (maxDepth !== undefined && maxDepth > 0) {
+      // individual row exceeding end‑of‑hole is always critical
+      if (toVal > maxDepth + TOLERANCE) {
+        overSites.add(siteId);
         errors.push({
           id: `eoh-${tableType}-${row.id}`,
           table: tableType,
           rowId: row.id,
           siteId: safeSiteId(row),
           column: 'DEPTH_TO',
-          message: `Depth Exceeded: 'DEPTH_TO' (${row.DEPTH_TO}) exceeds Collar TOTAL_DEPTH (${maxDepth}).`,
+          message: `Depth Exceeded: 'DEPTH_TO' (${row.DEPTH_TO}) exceeds Collar END_DEPTH (${maxDepth}).`, 
           severity: ValidationSeverity.CRITICAL,
           type: 'LOGIC',
         });
       }
+    }
+  });
+
+  // bottom‑of‑hole coverage: ensure the deepest interval reaches the collar depth
+  maxToBySite.forEach((deepest, siteId) => {
+    const total = collarMap.get(siteId);
+    if (total !== undefined && deepest < total - TOLERANCE) {
+      errors.push({
+        id: `eohbot-${tableType}-${siteId}`,
+        table: tableType,
+        rowId: '',
+        siteId,
+        column: 'DEPTH_TO',
+        message: `Bottom coverage: deepest sample (${deepest}) is shallower than Collar END_DEPTH (${total}).`, 
+        severity: overSites.has(siteId) ? ValidationSeverity.WARNING : ValidationSeverity.CRITICAL,
+        type: 'LOGIC',
+      });
     }
   });
 
@@ -312,6 +351,31 @@ const validateValues = (
 /**
  * Main Validation Runner
  */
+
+/**
+ * Ensure collars have a reasonable END_DEPTH > 0
+ */
+const validateCollarDepths = (collars: CollarRow[]): ValidationError[] => {
+  return collars
+    .map(c => {
+      const depth = safeFloat(c.END_DEPTH);
+      if (depth <= 0) {
+        return {
+          id: `collar-depth-${c.id}`,
+          table: TableType.COLLAR,
+          rowId: c.id,
+          siteId: c.SITE_ID,
+          column: 'END_DEPTH',
+          message: `Invalid Collar depth (${c.END_DEPTH}). Must be greater than zero.`,
+          severity: ValidationSeverity.CRITICAL,
+          type: 'VALUE',
+        } as ValidationError;
+      }
+      return null;
+    })
+    .filter((e): e is ValidationError => e !== null);
+};
+
 export const runValidation = (
   collarData: CollarRow[],
   surveyData: SurveyRow[],
@@ -334,6 +398,8 @@ export const runValidation = (
   if (collarConfig) {
       allErrors = [...allErrors, ...validateStructure(collarData, collarConfig)];
       allErrors = [...allErrors, ...validateValues(collarData, collarConfig, libraries)];
+      // explicit check for valid total depth
+      allErrors = [...allErrors, ...validateCollarDepths(collarData)];
   }
 
   // --- 2. SURVEY CHECKS ---
@@ -345,7 +411,7 @@ export const runValidation = (
   
   // Integrity & Logic for Survey
   allErrors = [...allErrors, ...validateIntegrity(collarData, surveyData, TableType.SURVEY)];
-  const collarMap = new Map(collarData.map((c) => [c.SITE_ID, safeFloat(c.TOTAL_DEPTH)]));
+  const collarMap = new Map(collarData.map((c) => [c.SITE_ID, safeFloat(c.END_DEPTH)]));
   
   surveyData.forEach(row => {
     const max = collarMap.get(row.SITE_ID);
@@ -392,12 +458,53 @@ export const runValidation = (
   validateGenericInterval(densityData, TableType.DENSITY);
 
   // --- Summary Calculation ---
-  const totalErrors = allErrors.filter((e) => e.severity === ValidationSeverity.CRITICAL).length;
-  const totalWarnings = allErrors.filter((e) => e.severity === ValidationSeverity.WARNING).length;
+  
+  // collapse repeated errors into grouped entries so the log isn’t flooded by
+  // the same problem occurring many times for the same hole/column.
+  const groupErrors = (errors: ValidationError[]): ValidationError[] => {
+    const map = new Map<string, { base: ValidationError; count: number; rowIds: string[] }>();
+    errors.forEach(err => {
+      // include first part of id (error category) to avoid merging over‑ and under‑EOH
+      const category = err.id.split('-')[0];
+      const key = [err.table, err.siteId, err.column || '', err.type, err.severity, category].join('|');
+      const existing = map.get(key);
+      if (existing) {
+        existing.count += 1;
+        existing.rowIds.push(err.rowId);
+      } else {
+        map.set(key, { base: { ...err }, count: 1, rowIds: [err.rowId] });
+      }
+    });
+
+    const result: ValidationError[] = [];
+    map.forEach(({ base, count, rowIds }) => {
+      if (count > 1) {
+        const grouped = { ...base };
+        grouped.rowId = rowIds.join(',');
+        // generic message based on category
+        if (base.id.startsWith('eohbot')) {
+          grouped.message = `${count} bottom‑of‑hole coverage issues on site ${base.siteId}.`;
+        } else if (base.id.startsWith('eoh')) {
+          grouped.message = `${count} intervals exceeded EOH on site ${base.siteId}.`;
+        } else {
+          grouped.message = `Multiple similar errors on site ${base.siteId}.`;
+        }
+        result.push(grouped);
+      } else {
+        result.push(base);
+      }
+    });
+    return result;
+  };
+
+  const finalErrors = groupErrors(allErrors);
+
+  const totalErrors = finalErrors.filter((e) => e.severity === ValidationSeverity.CRITICAL).length;
+  const totalWarnings = finalErrors.filter((e) => e.severity === ValidationSeverity.WARNING).length;
 
   return {
     totalErrors,
     totalWarnings,
-    errors: allErrors,
+    errors: finalErrors,
   };
 };

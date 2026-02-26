@@ -30,7 +30,7 @@
       "tableType": "COLLAR",
       "columns": [
         { "columnName": "site_id", "label": "Site ID", "isMandatory": true, "type": "string" },
-        { "columnName": "total_depth", "label": "Total Depth", "isMandatory": true, "type": "float", "validation": { "range": { "min": 0, "max": 2000, "strict": true } } }
+        { "columnName": "end_depth", "label": "End Depth", "isMandatory": true, "type": "float", "validation": { "range": { "min": 0, "max": 2000, "strict": true } } }
       ]
     },
     {

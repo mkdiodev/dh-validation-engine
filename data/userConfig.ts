@@ -7,7 +7,7 @@ export const userConfig = {
       "tableType": "COLLAR",
       "columns": [
         { "columnName": "SITE_ID", "label": "Site ID", "isSchemaRequired": true, "isMandatory": true, "type": "string" },
-        { "columnName": "TOTAL_DEPTH", "label": "Total Depth", "isSchemaRequired": true, "isMandatory": true, "type": "float", "validation": { "range": { "min": 0, "max": 2000, "strict": true } } }
+        { "columnName": "END_DEPTH", "label": "End Depth", "isSchemaRequired": true, "isMandatory": true, "type": "float", "validation": { "range": { "min": 0, "max": 2000, "strict": true } } }
       ]
     },
     {

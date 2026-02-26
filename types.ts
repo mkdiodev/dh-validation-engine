@@ -22,7 +22,7 @@ export enum TableType {
 export interface CollarRow {
   id: string; // Unique ID (Internal)
   SITE_ID: string; 
-  TOTAL_DEPTH: number;
+  END_DEPTH: number;
   [key: string]: any;
 }
 

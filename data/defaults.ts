@@ -9,7 +9,7 @@ export const defaultConfigs: TableConfig[] = [
     tableType: TableType.COLLAR,
     columns: [
       { columnName: 'SITE_ID', label: 'Site ID', isSchemaRequired: true, isMandatory: true, type: 'string' },
-      { columnName: 'TOTAL_DEPTH', label: 'Total Depth', isSchemaRequired: true, isMandatory: true, type: 'float' },
+      { columnName: 'END_DEPTH', label: 'End Depth', isSchemaRequired: true, isMandatory: true, type: 'float' },
     ],
   },
   {
